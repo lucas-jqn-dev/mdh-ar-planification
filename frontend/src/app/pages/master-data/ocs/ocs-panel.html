@@ -17,6 +17,13 @@
         <mat-radio-button [value]="option.value">{{ option.label }}</mat-radio-button>
       }
     </mat-radio-group>
+    <mat-checkbox
+      class="oc-sort-only-pending"
+      [ngModel]="onlyPending()"
+      (ngModelChange)="onlyPending.set($event)"
+    >
+      Solo pendientes
+    </mat-checkbox>
   </div>
 }
 
@@ -31,6 +38,10 @@
 } @else if (ocs().length === 0) {
   <div class="panel-state">
     <p>Todavía no hay OC cargadas.</p>
+  </div>
+} @else if (filteredOcs().length === 0) {
+  <div class="panel-state">
+    <p>No hay OC pendientes. Desmarcá "Solo pendientes" para ver todas.</p>
   </div>
 } @else if (isHandset()) {
   <div class="oc-cards">
@@ -111,10 +122,10 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.solped : row.id) {
+        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.label : row.id) {
           @if (isGroupRow(row)) {
             <tr class="oc-group-row">
-              <td [attr.colspan]="columnCount">SolPed {{ row.solped }}</td>
+              <td [attr.colspan]="columnCount">{{ row.label }}</td>
             </tr>
           } @else {
             <tr>

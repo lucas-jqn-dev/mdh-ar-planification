@@ -5,6 +5,7 @@
     [class.shell-sidenav--collapsed]="collapsed() && !isHandset()"
     [mode]="isHandset() ? 'over' : 'side'"
     [opened]="!isHandset()"
+    (transitionend)="onSidenavTransitionEnd($event)"
   >
     <mat-nav-list>
       @for (item of navItems; track item.path) {

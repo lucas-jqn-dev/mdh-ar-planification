@@ -174,17 +174,34 @@ chicas y verificables.
   reemplazada a pedido explícito del usuario) sino un `mat-radio-group`
   (`OcsPanel.sortKey`, tipo `SortKey = 'solped' | 'numeroOc' | 'consultor' |
   'proveedor' | 'responsable'`, exactamente esas 5 opciones, ni más ni
-  menos) arriba de la tabla. `displayRows` (el computed que arma el array
-  mixto de grupos+datos) solo agrupa cuando `sortKey() === 'solped'` — con
-  cualquier otro criterio la tabla se muestra plana, porque agrupar
-  visualmente dejaría de tener sentido si el orden ya no sigue el SolPed.
+  menos) arriba de la tabla. `displayRows` agrupa **siempre**, según el
+  campo que corresponda al `sortKey` activo (ya no es exclusivo de SolPed):
+  la función `groupValue(oc, key)` centraliza qué campo lee cada criterio
+  (mismo valor que usa `compareOcs()` para ordenar/desempatar), y
+  `GROUP_LABELS: Record<SortKey, string>` mapea cada criterio a su prefijo
+  de etiqueta ("SolPed", "Número OC", "Consultor", "Proveedor",
+  "Responsable") — la fila separadora se arma como `` `${GROUP_LABELS[key]}
+  ${value}` `` (ej. "Proveedor BRIGHTSIDE"). Si se pide agregar más criterios
+  de sort en el futuro, extender el union type `SortKey` + el `switch` de
+  `groupValue()` + `GROUP_LABELS` + `SORT_OPTIONS`, los cuatro deben quedar
+  en sync (no hay una fuente única de verdad para esto, a propósito, para que
+  el compilador fuerce a tocar los cuatro si se agrega un caso).
   `compareOcs()` desempata siempre por SolPed+Posición para que el orden no
   "salte" entre recargas cuando hay valores repetidos (ej. dos OC del mismo
-  Proveedor). Si se pide agregar más criterios de sort en el futuro, extender
-  el union type `SortKey` + el `switch` de `compareOcs()` + `SORT_OPTIONS`,
-  los tres deben quedar en sync (no hay una fuente única de verdad para esto,
-  a propósito, para que el compilador fuerce a tocar los tres si se agrega un
-  caso).
+  Proveedor).
+- **Checkbox "Solo pendientes" al final de `.oc-sort-bar`**
+  (`OcsPanel.onlyPending`, signal `boolean`, arranca en `true`) filtra la
+  tabla y las cards de mobile a solo posiciones con `completada: false`. Se
+  aplica **antes** del sorting/agrupado en la cadena de computeds:
+  `filteredOcs` (filtra `ocs()` según `onlyPending()`) → `sortedOcs` (ordena
+  `filteredOcs()`) → `displayRows` (agrupa `sortedOcs()`). El `summary()`
+  leído por el acordeón de `master-data.html` sigue contando
+  `this.ocs().length` (total sin filtrar), no `filteredOcs()` — el checkbox
+  es solo un filtro visual de la tabla, no debe afectar el contador del
+  header. Hay un mensaje de estado dedicado
+  (`filteredOcs().length === 0 && ocs().length > 0`) distinto del de lista
+  vacía de verdad (`ocs().length === 0`), para no confundir "no hay OC
+  pendientes" con "no hay OC cargadas".
 - **"Copiar" una OC no es lo mismo que editar una OC con datos precargados
   distintos** — es un modo de alta. `OcFormDialogData` tiene dos campos:
   `oc: Oc | null` (no-null = edición real, con botón Eliminar y
@@ -441,14 +458,20 @@ chicas y verificables.
   toggle expandir/colapsar todo del acordeón de Datos Maestros también se
   verificó (con el fix de arquitectura de `MatAccordion` descripto arriba).
 - El botón "Copiar" de cada posición de OC, el radio-group de sorting
-  (SolPed/Número OC/Consultor/Proveedor/Responsable, agrupado vs. plano), el
-  slide-toggle Pendiente/Completada (con persistencia confirmada recargando
-  el panel), el popup de confirmación de logout (cancelar vs. confirmar), y
-  el toggle de contraer/expandir del sidenav en desktop (con el fix de
-  centrado de íconos vía `::ng-deep`, reverificado con un restart limpio del
-  dev server tras un reporte de que "no achicaba") — todo esto se verificó
-  en el navegador contra el MongoDB Atlas real del usuario, sin errores de
-  consola. El comportamiento del sidenav en mobile (siempre a ancho
+  (SolPed/Número OC/Consultor/Proveedor/Responsable, con agrupado por el
+  criterio activo en los 5 casos — ver `groupValue()`/`GROUP_LABELS` en la
+  sección de arquitectura arriba), el slide-toggle Pendiente/Completada (con
+  persistencia confirmada recargando el panel), el checkbox "Solo pendientes"
+  (marcado por defecto, filtra antes de agrupar/ordenar y no afecta el
+  contador del acordeón), el popup de confirmación de logout (cancelar vs.
+  confirmar), y el toggle de contraer/expandir del sidenav en desktop (con
+  el fix de centrado de íconos vía `::ng-deep`, reverificado con un restart
+  limpio del dev server tras un reporte de que "no achicaba") — todo esto se
+  verificó en el navegador contra el MongoDB Atlas real del usuario, sin
+  errores de consola (agrupado multi-criterio y checkbox "Solo pendientes"
+  verificados toggleando un slide-toggle a Completada y confirmando que
+  desaparece de la tabla con el checkbox tildado, y que reaparece al
+  destildarlo). El comportamiento del sidenav en mobile (siempre a ancho
   completo, ignora `collapsed()`) se validó leyendo el template, no en el
   navegador — `resize_window` no dispara el listener de `BreakpointObserver`
   vía CDP sin un reload completo (gotcha ya documentado más abajo), y forzar

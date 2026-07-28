@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -31,13 +32,37 @@ export const SORT_OPTIONS: readonly { value: SortKey; label: string }[] = [
 
 export interface OcGroupRow {
   kind: 'group';
-  solped: string;
+  label: string;
 }
 
 export type OcDisplayRow = OcGroupRow | Oc;
 
 export function isGroupRow(row: OcDisplayRow): row is OcGroupRow {
   return (row as OcGroupRow).kind === 'group';
+}
+
+const GROUP_LABELS: Record<SortKey, string> = {
+  solped: 'SolPed',
+  numeroOc: 'Número OC',
+  consultor: 'Consultor',
+  proveedor: 'Proveedor',
+  responsable: 'Responsable',
+};
+
+/** Valor por el que se agrupa/desempata según `key` — mismo campo que usa el radio-group. */
+function groupValue(oc: Oc, key: SortKey): string {
+  switch (key) {
+    case 'solped':
+      return oc.solped;
+    case 'numeroOc':
+      return oc.numeroOc || '—';
+    case 'consultor':
+      return oc.consultor?.nombre || '—';
+    case 'proveedor':
+      return oc.consultor?.proveedor || '—';
+    case 'responsable':
+      return oc.consultor?.responsable || '—';
+  }
 }
 
 function sortOcs(items: Oc[]): Oc[] {
@@ -47,20 +72,10 @@ function sortOcs(items: Oc[]): Oc[] {
 /** Empate se resuelve por SolPed+Posición, para que el orden no "salte" entre recargas. */
 function compareOcs(a: Oc, b: Oc, key: SortKey): number {
   const tiebreak = () => a.solped.localeCompare(b.solped) || a.posicion - b.posicion;
-  switch (key) {
-    case 'solped':
-      return tiebreak();
-    case 'numeroOc':
-      return (a.numeroOc || '').localeCompare(b.numeroOc || '') || tiebreak();
-    case 'consultor':
-      return (a.consultor?.nombre || '').localeCompare(b.consultor?.nombre || '') || tiebreak();
-    case 'proveedor':
-      return (a.consultor?.proveedor || '').localeCompare(b.consultor?.proveedor || '') || tiebreak();
-    case 'responsable':
-      return (
-        (a.consultor?.responsable || '').localeCompare(b.consultor?.responsable || '') || tiebreak()
-      );
+  if (key === 'solped') {
+    return tiebreak();
   }
+  return groupValue(a, key).localeCompare(groupValue(b, key)) || tiebreak();
 }
 
 function totalPosicion(oc: Oc): number | null {
@@ -80,6 +95,7 @@ function totalPosicion(oc: Oc): number | null {
     MatProgressSpinnerModule,
     MatRadioModule,
     MatSlideToggleModule,
+    MatCheckboxModule,
   ],
   templateUrl: './ocs-panel.html',
   styleUrl: './ocs-panel.scss',
@@ -101,8 +117,9 @@ export class OcsPanel {
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly sortKey = signal<SortKey>('solped');
+  readonly onlyPending = signal(true);
 
-  /** Leído por master-data.html para el mat-panel-description del acordeón. */
+  /** Leído por master-data.html para el mat-panel-description del acordeón (total sin filtrar). */
   readonly summary = computed(() => {
     if (this.loading() || this.errorMessage()) {
       return '';
@@ -111,32 +128,38 @@ export class OcsPanel {
     return `${count} registrada${count === 1 ? '' : 's'}`;
   });
 
-  /** Filas ordenadas según `sortKey` (o SolPed+Posición si aún no se tocó el radio-group). */
+  /** Todas las OC, o solo las pendientes si el checkbox "Solo pendientes" está tildado. */
+  readonly filteredOcs = computed(() => {
+    const items = this.ocs();
+    return this.onlyPending() ? items.filter((oc) => !oc.completada) : items;
+  });
+
+  /** Filas filtradas y ordenadas según `sortKey` (SolPed+Posición por default). */
   readonly sortedOcs = computed(() => {
     const key = this.sortKey();
+    const items = this.filteredOcs();
     if (key === 'solped') {
-      return sortOcs(this.ocs());
+      return sortOcs(items);
     }
-    return [...this.ocs()].sort((a, b) => compareOcs(a, b, key));
+    return [...items].sort((a, b) => compareOcs(a, b, key));
   });
 
   /**
-   * Filas a renderizar en la tabla desktop: agrupadas por SolPed (con una
-   * fila separadora por grupo) solo cuando `sortKey` es 'solped' — agrupar
-   * dejaría de tener sentido visual si el orden ya no sigue el SolPed.
+   * Filas a renderizar en la tabla desktop: siempre agrupadas, según el
+   * campo que corresponda al `sortKey` activo (SolPed, Número OC, Consultor,
+   * Proveedor o Responsable) — una fila separadora por cada valor distinto.
    */
   readonly displayRows = computed<OcDisplayRow[]>(() => {
+    const key = this.sortKey();
     const items = this.sortedOcs();
-    if (this.sortKey() !== 'solped') {
-      return items;
-    }
 
     const rows: OcDisplayRow[] = [];
-    let lastSolped: string | null = null;
+    let lastValue: string | null = null;
     for (const oc of items) {
-      if (oc.solped !== lastSolped) {
-        rows.push({ kind: 'group', solped: oc.solped });
-        lastSolped = oc.solped;
+      const value = groupValue(oc, key);
+      if (value !== lastValue) {
+        rows.push({ kind: 'group', label: `${GROUP_LABELS[key]} ${value}` });
+        lastValue = value;
       }
       rows.push(oc);
     }

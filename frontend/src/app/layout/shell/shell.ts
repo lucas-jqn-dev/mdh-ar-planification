@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenavContainer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -47,11 +47,26 @@ export class Shell {
   readonly currentUser = this.authService.currentUser;
   readonly isHandset = injectIsHandset();
 
+  private readonly sidenavContainer = viewChild.required(MatSidenavContainer);
+
   /** Solo aplica en desktop (mode="side"); en mobile el drawer es "over" y siempre a ancho completo. */
   readonly collapsed = signal(false);
 
   toggleCollapsed(): void {
     this.collapsed.update((collapsed) => !collapsed);
+  }
+
+  /**
+   * `MatDrawerContainer` solo recalcula el `margin-left` de `mat-sidenav-content`
+   * en cambios de estado abierto/cerrado o de `mode` — nunca en un cambio de
+   * ancho in-place como el de este toggle (drawer se mantiene `opened`/`side`
+   * todo el tiempo). Sin este hook el margin queda pegado en el ancho viejo
+   * (240px) y se ve un hueco entre el sidenav colapsado y el contenido.
+   */
+  onSidenavTransitionEnd(event: TransitionEvent): void {
+    if (event.propertyName === 'width') {
+      this.sidenavContainer().updateContentMargins();
+    }
   }
 
   logout(): void {

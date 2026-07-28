@@ -4,8 +4,20 @@
 
 .shell-sidenav {
   width: 15rem;
-  transition: width 200ms ease;
   background-color: var(--mat-sys-primary);
+
+  // Angular Material define `.mat-drawer-transition .mat-drawer { transition:
+  // transform 400ms ... }` para su propia animación de apertura/cierre — misma
+  // especificidad (dos clases) que una regla `.shell-sidenav { transition: ... }`
+  // suelta, y gana por orden de carga, pisando por completo nuestra transición
+  // de `width` (el shorthand `transition` reemplaza, no combina). Calificar
+  // también con `.mat-sidenav` (clase que `MatSidenav` siempre agrega al host)
+  // suma una clase de especificidad para que esta gane siempre, sin tocar la
+  // transición de `transform` que sigue necesitando el modo mobile
+  // (`mode="over"`) para su slide-in/out.
+  &.mat-sidenav {
+    transition: width 200ms ease;
+  }
 }
 
 .shell-sidenav--collapsed {

@@ -340,7 +340,7 @@ cantidadHoras`, recalculado en vivo a medida que se completa el formulario).
 > tarifa vigente al momento de la carga, hay que decidirlo explícitamente y
 > pasar a un modelo de snapshot.
 
-**Tabla de OC: agrupada por SolPed + sorting por radio-group.** El listado
+**Tabla de OC: agrupada según el criterio de sorting activo.** El listado
 desktop de OC **no** usa `<table mat-table>` (a diferencia de Perfiles SAP/
 Consultores/PEPs) sino una tabla HTML nativa (`ocs-panel.html`) — porque
 necesita mezclar libremente filas de "encabezado de grupo" con filas de
@@ -349,14 +349,25 @@ contra el type-checking estricto de los templates. El orden no se elige
 clickeando columnas: hay un `mat-radio-group` arriba de la tabla ("Ordenar
 por") con 5 opciones — **SolPed, Número OC, Consultor, Proveedor,
 Responsable** — y la tabla (y las cards de mobile, que comparten el mismo
-signal `sortedOcs`) se reordena en vivo al cambiar la selección. El
-comportamiento de agrupado: mientras el criterio activo es "SolPed" (default
-al entrar al panel) las filas se agrupan visualmente por SolPed con una fila
-separadora por grupo y las posiciones ordenadas dentro de cada grupo; con
-cualquier otro criterio la tabla se muestra plana — agrupar dejaría de tener
-sentido visual si el orden ya no sigue el SolPed. Los empates dentro de un
-mismo criterio (ej. dos OC del mismo Proveedor) se desempatan siempre por
-SolPed+Posición, para que el orden no "salte" entre recargas.
+signal `sortedOcs`) se reordena en vivo al cambiar la selección. El agrupado
+ya **no** es exclusivo de SolPed: cualquiera sea el criterio activo, la
+tabla inserta una fila separadora por cada valor distinto de ese campo (ej.
+"Proveedor BRIGHTSIDE", "Responsable Lucas") — el prefijo de la etiqueta sale
+de `GROUP_LABELS` (`ocs-panel.ts`), un mapa `SortKey → texto`. Los empates
+dentro de un mismo criterio (ej. dos OC del mismo Proveedor) se desempatan
+siempre por SolPed+Posición, para que el orden no "salte" entre recargas.
+
+**Checkbox "Solo pendientes".** Al final de la barra de sorting (`.oc-sort-bar`)
+hay un `mat-checkbox` que filtra la tabla (y las cards de mobile) para
+mostrar solo posiciones con `completada: false` — **marcado por defecto** al
+entrar al panel (`onlyPending = signal(true)`). El filtro se aplica antes que
+el sorting/agrupado (`filteredOcs` → `sortedOcs` → `displayRows`), así que
+conviven sin conflicto: si se desmarca, vuelven a aparecer también las
+completadas. El resumen del acordeón ("N registradas") sigue contando el
+total sin filtrar — no se ve afectado por este checkbox. Hay un mensaje de
+estado dedicado ("No hay OC pendientes...") para cuando el filtro deja la
+lista vacía, distinto del mensaje de "Todavía no hay OC cargadas" (lista
+vacía de verdad).
 
 **Copiar una posición.** Cada fila de la tabla (y cada card en mobile) tiene,
 junto al lápiz de editar, un botón "Copiar" (ícono `content_copy`) que abre
