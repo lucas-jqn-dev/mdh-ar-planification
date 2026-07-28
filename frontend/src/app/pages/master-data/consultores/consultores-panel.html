@@ -39,6 +39,10 @@
           <dd>{{ consultor.equipo }}</dd>
           <dt>Responsable</dt>
           <dd>{{ consultor.responsable }}</dd>
+          <dt>Perfil SAP</dt>
+          <dd>
+            {{ consultor.perfilSap ? consultor.perfilSap.codigoSap + ' — ' + consultor.perfilSap.descripcion : '—' }}
+          </dd>
         </dl>
       </mat-card>
     }
@@ -64,6 +68,13 @@
       <ng-container matColumnDef="responsable">
         <th mat-header-cell *matHeaderCellDef>Responsable</th>
         <td mat-cell *matCellDef="let consultor">{{ consultor.responsable }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="perfilSap">
+        <th mat-header-cell *matHeaderCellDef>Perfil SAP</th>
+        <td mat-cell *matCellDef="let consultor">
+          {{ consultor.perfilSap ? consultor.perfilSap.codigoSap + ' — ' + consultor.perfilSap.descripcion : '—' }}
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="acciones">

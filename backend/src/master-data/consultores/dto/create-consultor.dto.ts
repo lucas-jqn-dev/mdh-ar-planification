@@ -1,4 +1,10 @@
-import { IsEnum, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsMongoId,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import {
   EquipoConsultor,
@@ -23,4 +29,7 @@ export class CreateConsultorDto {
 
   @IsEnum(ResponsableConsultor)
   responsable: ResponsableConsultor;
+
+  @IsMongoId()
+  perfilSapId: string;
 }

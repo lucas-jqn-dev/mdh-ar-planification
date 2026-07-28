@@ -36,6 +36,8 @@
           <p class="pep-card-descripcion">{{ pep.descripcion }}</p>
         }
         <dl class="pep-card-details">
+          <dt>País</dt>
+          <dd>{{ pep.pais || '—' }}</dd>
           <dt>Presupuesto planificado</dt>
           <dd>{{ formatMonto(pep.presupuestoTotal) }}</dd>
         </dl>
@@ -53,6 +55,11 @@
       <ng-container matColumnDef="descripcion">
         <th mat-header-cell *matHeaderCellDef>Descripción</th>
         <td mat-cell *matCellDef="let pep">{{ pep.descripcion || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="pais">
+        <th mat-header-cell *matHeaderCellDef>País</th>
+        <td mat-cell *matCellDef="let pep">{{ pep.pais || '—' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="presupuestoTotal">

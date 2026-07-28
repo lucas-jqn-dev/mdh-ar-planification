@@ -50,6 +50,21 @@
         }
       </mat-form-field>
 
+      <mat-form-field appearance="outline" class="consultor-field">
+        <mat-label>Perfil SAP</mat-label>
+        <mat-select formControlName="perfilSapId">
+          @for (option of perfilesSap(); track option.id) {
+            <mat-option [value]="option.id">{{ option.codigoSap }} — {{ option.descripcion }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.perfilSapId.touched && form.controls.perfilSapId.hasError('required')) {
+          <mat-error>Seleccioná un perfil SAP</mat-error>
+        }
+        @if (!loadingPerfilesSap() && perfilesSap().length === 0) {
+          <mat-hint>No hay perfiles SAP cargados todavía.</mat-hint>
+        }
+      </mat-form-field>
+
       @if (errorMessage()) {
         <p class="consultor-error" role="alert">{{ errorMessage() }}</p>
       }

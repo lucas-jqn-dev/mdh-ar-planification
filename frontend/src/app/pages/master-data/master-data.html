@@ -20,9 +20,9 @@
           <mat-icon class="panel-title-icon">contacts</mat-icon>
           Perfiles SAP
         </mat-panel-title>
-        <mat-panel-description>Próximamente</mat-panel-description>
+        <mat-panel-description>{{ perfilesSapPanel()?.summary() }}</mat-panel-description>
       </mat-expansion-panel-header>
-      <p class="panel-placeholder">Todavía no implementado.</p>
+      <app-perfiles-sap-panel />
     </mat-expansion-panel>
 
     <mat-expansion-panel>
@@ -53,9 +53,9 @@
           <mat-icon class="panel-title-icon">shopping_cart</mat-icon>
           OCs
         </mat-panel-title>
-        <mat-panel-description>Próximamente</mat-panel-description>
+        <mat-panel-description>{{ ocsPanel()?.summary() }}</mat-panel-description>
       </mat-expansion-panel-header>
-      <p class="panel-placeholder">Todavía no implementado.</p>
+      <app-ocs-panel />
     </mat-expansion-panel>
   </mat-accordion>
 </div>

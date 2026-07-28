@@ -1,3 +1,9 @@
+/** Debe mantenerse en espejo con backend/src/master-data/peps/schemas/pep.schema.ts */
+export enum Pais {
+  ARGENTINA = 'Argentina',
+  COLOMBIA = 'Colombia',
+}
+
 export interface PresupuestoMensual {
   enero: number;
   febrero: number;
@@ -59,10 +65,11 @@ export interface Pep {
   id: string;
   pepId: string;
   descripcion?: string;
+  pais: Pais;
   presupuestoMensual: PresupuestoMensual;
   presupuestoTotal: number;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type PepPayload = Pick<Pep, 'pepId' | 'descripcion' | 'presupuestoMensual'>;
+export type PepPayload = Pick<Pep, 'pepId' | 'descripcion' | 'pais' | 'presupuestoMensual'>;

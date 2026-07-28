@@ -19,6 +19,11 @@ export const MESES = [
 
 export type Mes = (typeof MESES)[number];
 
+export enum PaisPep {
+  ARGENTINA = 'Argentina',
+  COLOMBIA = 'Colombia',
+}
+
 @Schema({ _id: false })
 export class PresupuestoMensual {
   @Prop({ type: Number, required: true, default: 0, min: 0 })
@@ -82,6 +87,9 @@ export class Pep {
 
   @Prop({ trim: true, default: '' })
   descripcion?: string;
+
+  @Prop({ type: String, enum: PaisPep, required: true })
+  pais: PaisPep;
 
   @Prop({ type: PresupuestoMensualSchema, required: true, default: () => ({}) })
   presupuestoMensual: PresupuestoMensual;

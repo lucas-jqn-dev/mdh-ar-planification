@@ -4,15 +4,27 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ConsultoresPanel } from './consultores/consultores-panel';
 import { PepsPanel } from './peps/peps-panel';
+import { PerfilesSapPanel } from './perfiles-sap/perfiles-sap-panel';
+import { OcsPanel } from './ocs/ocs-panel';
 
 @Component({
   selector: 'app-master-data',
   standalone: true,
-  imports: [MatExpansionModule, MatButtonModule, MatIconModule, ConsultoresPanel, PepsPanel],
+  imports: [
+    MatExpansionModule,
+    MatButtonModule,
+    MatIconModule,
+    PerfilesSapPanel,
+    ConsultoresPanel,
+    PepsPanel,
+    OcsPanel,
+  ],
   templateUrl: './master-data.html',
   styleUrl: './master-data.scss',
 })
 export class MasterData {
+  readonly perfilesSapPanel = viewChild(PerfilesSapPanel);
   readonly consultoresPanel = viewChild(ConsultoresPanel);
   readonly pepsPanel = viewChild(PepsPanel);
+  readonly ocsPanel = viewChild(OcsPanel);
 }

@@ -1,12 +1,13 @@
-# planification-mdh-team
+# MDH AR • Planificador de Presupuestos
 
-**MDH AR • Planificador** — aplicación full stack (Angular + NestJS + MongoDB)
+Aaplicación full stack (Angular + NestJS + MongoDB)
 con autenticación JWT + Refresh Tokens, para el equipo MDH de Cencosud
 Argentina (marca Easy). Etapa 1 entregó una pantalla de Login segura,
 responsive y accesible como único punto de entrada. Etapa 2 agrega la
 navegación autenticada (shell con menú lateral), Datos Maestros (ABM de
-Consultores y de PEPs con presupuesto planificado mensual) y la identidad
-visual de marca (colores/tipografía/logo Easy Cencosud).
+Perfiles SAP, Consultores —con Perfil SAP asociado— y de PEPs —con país y
+presupuesto planificado mensual—) y la identidad visual de marca
+(colores/tipografía/logo Easy Cencosud).
 
 ## Stack
 
@@ -112,8 +113,11 @@ planification-mdh-team/
       auth/            # login, refresh, logout, me, guards, estrategias JWT
       users/            # schema, service, seed de admin
       master-data/       # Datos Maestros
-        consultores/      # ABM Consultores (schema, dto, service, controller)
+        perfiles-sap/      # ABM Perfiles SAP (schema, dto, service, controller)
+        consultores/      # ABM Consultores (schema, dto, service, controller; ref a PerfilSap)
         peps/              # ABM PEPs (schema con presupuesto mensual, dto, service, controller)
+        ocs/                # ABM OC (schema, dto, service, controller; ref a Pep y Consultor)
+        shared/             # normalize-populated-ref.util.ts (reutilizado por los schemas con refs)
       common/            # filtro de excepciones estándar, decorators (@Public, @CurrentUser)
       config/            # configuración centralizada + validación de env (Joi)
       database/          # conexión Mongoose
@@ -127,14 +131,17 @@ planification-mdh-team/
         services/         # AuthService, TokenStore (access token en memoria)
         utils/             # injectIsHandset, formatMonto (breakpoint y formato de moneda compartidos)
       auth/login/         # pantalla de Login
+      shared/confirm-dialog/ # dialog de confirmación genérico (usado por Shell.logout())
       layout/shell/         # shell autenticado: sidenav + toolbar + router-outlet
       pages/
         home/                # placeholder protegido
         master-data/
           master-data.ts       # shell: acordeón con un panel por sub-módulo
+          perfiles-sap/           # panel + service + dialog de Perfiles SAP
           consultores/           # panel + service + dialog de Consultores
           peps/                   # panel + service + dialog de PEPs
-      models/               # User, Auth, Consultor, Pep (+ enums en espejo con el backend)
+          ocs/                     # panel + service + dialog de OC
+      models/               # User, Auth, PerfilSap, Consultor, Pep, Oc (+ enums en espejo con el backend)
   .husky/                 # git hooks (pre-commit: lint-staged, commit-msg: commitlint)
 ```
 
@@ -165,15 +172,37 @@ logging) en [CLAUDE.md](CLAUDE.md).
 
 ## Navegación autenticada
 
-Tras el login, `layout/shell` provee un menú lateral (persistente en desktop,
-colapsable en mobile) con tres rutas hijas de `''`, todas protegidas por
-`authGuard` en la ruta padre:
+Tras el login, `layout/shell` provee un menú lateral con tres rutas hijas de
+`''`, todas protegidas por `authGuard` en la ruta padre:
 
 | Ruta               | Página          | Estado                          |
 | ------------------- | ---------------- | -------------------------------- |
 | `/home`             | Home            | Placeholder                      |
-| `/master_data`      | Datos Maestros  | ABM de Consultores implementado  |
+| `/master_data`      | Datos Maestros  | ABM de Perfiles SAP, Consultores, PEPs y OC implementado |
 | `/order_recepcions` | Recepciones     | Placeholder                      |
+
+**Sidenav en desktop: expandible/contraíble, siempre visible.** A diferencia
+de mobile (donde el `mat-sidenav` es `mode="over"`, oculto por default y se
+abre/cierra con el botón hamburguesa), en desktop es `mode="side"` — nunca se
+oculta del todo, pero un botón en el toolbar (`Shell.toggleCollapsed()`,
+signal `collapsed`) alterna su ancho entre 15rem (con ícono + label) y
+4.5rem (rail de solo íconos, centrados). El label de cada item
+(`matListItemTitle`) se saca del DOM con `@if (!collapsed() || isHandset())`
+en vez de ocultarlo con CSS, para que no quede espacio fantasma reservado.
+Ver el gotcha de icon-centering en CLAUDE.md si tocás este componente — hubo
+que pisar el `flex:1` interno de `MatListItem` con `::ng-deep` para que
+`justify-content: center` funcionara de verdad.
+
+**Logout con confirmación.** El botón "Cerrar sesión" del toolbar ya no
+dispara el logout directo: abre `ConfirmDialog`
+(`frontend/src/app/shared/confirm-dialog/`), un componente genérico
+reutilizable (`title`/`message`/`confirmText`/`cancelText` por `MAT_DIALOG_DATA`,
+devuelve `boolean` por `dialogRef.close()`) con el mensaje "¿Desea cerrar
+sesión y salir?". Solo si el usuario confirma, `Shell.logout()` sigue con el
+flujo real (`AuthService.logout()` + redirect a `/login`). Es el primer
+componente en `shared/` — esa carpeta estaba preparada pero vacía hasta
+ahora; si aparece otro caso de "confirmar antes de una acción", reusar este
+componente en vez de escribir un dialog ad-hoc nuevo.
 
 ## Datos Maestros
 
@@ -182,12 +211,12 @@ La página `/master_data` organiza sus sub-módulos en un `mat-accordion`
 panel y botones "Expandir todo" / "Colapsar todo" en el header
 (`accordion.openAll()` / `.closeAll()` vía template reference `#accordion`).
 Los `<mat-expansion-panel>` viven en `master-data.ts/html` (el shell); cada
-sub-módulo (Consultores, PEPs) es un componente aparte que solo aporta el
-*contenido* de su panel — ver el gotcha sobre esto en CLAUDE.md, es
-importante si agregás un sub-módulo nuevo. Estado actual: **Consultores**
-(implementado, expandido por defecto), **PEPs** (implementado, colapsado) y
-**OCs** (placeholder "Todavía no implementado.", a la espera de analizar esa
-solapa del Excel).
+sub-módulo (Perfiles SAP, Consultores, PEPs, OC) es un componente aparte que
+solo aporta el *contenido* de su panel — ver el gotcha sobre esto en
+CLAUDE.md, es importante si agregás un sub-módulo nuevo. Estado actual, en
+orden de dependencia: **Perfiles SAP** → **Consultores** (necesita Perfiles
+SAP cargados) → **PEPs** → **OC** (necesita Consultores y PEPs cargados).
+Todos implementados.
 
 Ambos sub-módulos siguen el mismo patrón CRUD (ver "Patrón de módulo Datos
 Maestros" en [CLAUDE.md](CLAUDE.md)): dialog único para alta/edición/baja con
@@ -195,19 +224,43 @@ confirmación inline al eliminar, validación reactiva con botón de submit
 deshabilitado mientras el form es inválido, y snackbar de feedback en cada
 acción.
 
+### Perfiles SAP
+
+Catálogo de perfiles SAP que luego se asignan a los Consultores. Campos:
+`codigoSap` (texto libre, único, ej. `8006521`), `descripcion` (texto libre,
+obligatoria, ej. `SAP CONSULTOR ABAP ESP.`), `tarifaHora` (numérico ≥ 0) y
+`proveedor` (mismo enum compartido con Consultores — ver abajo).
+
+- **Backend**: `backend/src/master-data/perfiles-sap/` — `codigoSap` con
+  índice único (409 `ConflictException` si se duplica), CRUD REST en
+  `/master-data/perfiles-sap`.
+- **Frontend**: `frontend/src/app/pages/master-data/perfiles-sap/` — listado
+  responsive y `perfil-sap-form-dialog/`, mismo patrón que Consultores/PEPs.
+
 ### Consultores
 
 Basado en la solapa "1- Consultores" del planificador Excel
 (`PLanificador MDH.xlsm`). Campos: `nombre` (texto libre), `proveedor`,
 `equipo` y `responsable` (selects con valores fijos, tomados de los datos
-reales del Excel).
+reales del Excel) y `perfilSap` (select obligatorio, referencia a un Perfil
+SAP cargado previamente).
 
 - **Backend**: `backend/src/master-data/consultores/` — enums
-  `ProveedorConsultor`, `EquipoConsultor`, `ResponsableConsultor`
-  (`schemas/consultor.schema.ts`), CRUD REST en `/master-data/consultores`.
+  `ProveedorConsultor` (compartido con Perfiles SAP), `EquipoConsultor`,
+  `ResponsableConsultor` (`schemas/consultor.schema.ts`); `perfilSap` es un
+  `ref` de Mongoose a `PerfilSap` (populado en `findAll`/`create`/`update`,
+  con existencia validada contra la colección de perfiles antes de guardar),
+  CRUD REST en `/master-data/consultores`.
 - **Frontend**: `frontend/src/app/pages/master-data/consultores/` — listado
   responsive (`mat-table` en desktop, cards apiladas en mobile) y
-  `consultor-form-dialog/`.
+  `consultor-form-dialog/` (carga la lista de Perfiles SAP al abrirse para
+  poblar el select).
+
+> Los Consultores creados **antes** de agregar este campo no tienen
+> `perfilSap` en Mongo (no se migraron datos existentes): el backend lo
+> serializa como `null` y el frontend muestra `—` en la tabla/cards para esos
+> registros en vez de romper. Al editarlos, el campo pasa a ser obligatorio
+> como cualquier alta nueva.
 
 ### PEPs
 
@@ -215,16 +268,18 @@ Basado en la solapa "2- PEPs" del Excel, simplificado para esta etapa (sin
 los campos TTL IMPUTADO / TTL DISPONIBLE / fila REAL del Excel — eso queda
 para cuando se integren las Recepciones/OC que alimentan lo "imputado").
 Campos: `pepId` (ID del PEP, columna A del Excel, único, obligatorio),
-`descripcion` (libre, opcional) y `presupuestoMensual` (12 montos, uno por
-mes, todos numéricos con default `0`). La tabla principal muestra ID PEP,
-Descripción y **Presupuesto planificado** = suma de los 12 meses (virtual
-`presupuestoTotal`, no se persiste, se recalcula siempre desde los meses).
+`descripcion` (libre, opcional), `pais` (select obligatorio, enum
+`Argentina` / `Colombia`) y `presupuestoMensual` (12 montos, uno por mes,
+todos numéricos con default `0`). La tabla principal muestra ID PEP,
+Descripción, País y **Presupuesto planificado** = suma de los 12 meses
+(virtual `presupuestoTotal`, no se persiste, se recalcula siempre desde los
+meses).
 
 - **Backend**: `backend/src/master-data/peps/` — subdocumento
   `PresupuestoMensual` (12 props numéricas `min: 0`) embebido en `Pep`
-  (`schemas/pep.schema.ts`), `presupuestoTotal` como virtual Mongoose, `pepId`
-  con índice único (409 `ConflictException` si se duplica), CRUD REST en
-  `/master-data/peps`.
+  (`schemas/pep.schema.ts`), enum `PaisPep` (`Argentina` / `Colombia`),
+  `presupuestoTotal` como virtual Mongoose, `pepId` con índice único (409
+  `ConflictException` si se duplica), CRUD REST en `/master-data/peps`.
 - **Frontend**: `frontend/src/app/pages/master-data/peps/` —
   `pep-form-dialog/` arma dinámicamente 12 `FormControl` a partir del array
   `MESES` (`models/pep.model.ts`) y muestra un total en vivo (`computed` sobre
@@ -232,7 +287,103 @@ Descripción y **Presupuesto planificado** = suma de los 12 meses (virtual
   montos se formatean con `formatMonto()` (`core/utils/format.util.ts`,
   `Intl.NumberFormat('es-AR')`) tanto en el dialog como en la tabla/cards.
 
-**Ajustar los enums/campos a futuro**: los enums de Consultores y el array
+> Igual que con `perfilSap` en Consultores: los PEPs creados antes de agregar
+> `pais` no lo tienen en Mongo, se muestra `—` en su lugar hasta que se
+> editen.
+
+### OC
+
+Basado en la solapa "3- OC" del planificador Excel, **deliberadamente
+simplificado** a pedido explícito del usuario: el Excel maneja fechas de
+validez, hasta 3 PEPs por posición con porcentaje de reparto y columnas
+auxiliares de VLOOKUP; acá una OC tiene un único PEP y los campos mínimos
+para cargar una posición. Campos: `solped` (texto, obligatorio),
+`posicion` (número, obligatorio — la posición de la OC dentro del SolPed, ej.
+10/20/30), `numeroOc` (texto, **opcional** — puede no existir todavía al
+cargar la posición), `pep` (select obligatorio, referencia a un PEP cargado),
+`cantidadHoras` (número, obligatorio), `consultor` (select obligatorio,
+referencia a un Consultor cargado) y `mesDesde`/`mesHasta` (validez de la OC,
+granularidad de mes, formato `"YYYY-MM"`, ambos obligatorios). Al elegir el
+Consultor, el dialog muestra —de solo lectura— su Perfil SAP, Tarifa hora,
+Proveedor, Responsable y el **Total de la posición** (`tarifaHora *
+cantidadHoras`, recalculado en vivo a medida que se completa el formulario).
+
+- **Backend**: `backend/src/master-data/ocs/` — `pep` y `consultor` son
+  `ref` de Mongoose (a `Pep` y `Consultor` respectivamente), poblados en
+  `findAll`/`create`/`update` (`consultor` con doble-populate: también trae
+  su `perfilSap`), con existencia validada contra sus colecciones antes de
+  guardar (mismo criterio que `perfilSap` en Consultores). `mesDesde`/
+  `mesHasta` se validan con `@Matches(MES_ANIO_REGEX)` (`/^\d{4}-(0[1-9]|1
+  [0-2])$/`, exportado desde `oc.schema.ts`) tanto en el schema (Mongoose
+  `match`) como en el DTO. CRUD REST en `/master-data/ocs`.
+- **Frontend**: `frontend/src/app/pages/master-data/ocs/` — `oc-form-dialog/`
+  carga las listas de PEPs y Consultores al abrirse; el bloque de "Datos del
+  consultor" (Perfil SAP/Tarifa/Proveedor/Responsable/Total) es un
+  `computed()` sobre signals derivados de `consultorId.valueChanges` y
+  `cantidadHoras.valueChanges` (no sobre `FormControl.value` directo — un
+  `computed()` no trackea lecturas de `.value` porque no es una signal, solo
+  reacciona a signals; ver gotcha en CLAUDE.md). `mesDesde`/`mesHasta` usan
+  dos `<mat-datepicker>` independientes restringidos a mes: abren en vista
+  `multi-year` y se cierran apenas se elige el mes (`(monthSelected)`), sin
+  pasar nunca por la vista de día — el recipe oficial de Angular Material
+  para un "month picker", sin necesitar un header de calendario custom. Un
+  validador a nivel de `FormGroup` bloquea el submit si "Mes hasta" es
+  anterior a "Mes desde".
+
+> **Decisión de diseño — sin snapshot**: Perfil SAP/Tarifa/Proveedor/
+> Responsable de una OC se leen siempre **en vivo** desde el Consultor (y su
+> Perfil SAP) referenciado, igual que `Consultor.perfilSap`. Si más adelante
+> se edita la tarifa de un Perfil SAP o el proveedor de un Consultor, las OC
+> ya cargadas que los referencian van a reflejar el valor nuevo, no el que
+> tenían al momento de crear la OC. Es una simplificación consciente para
+> esta etapa (ver CLAUDE.md); si el negocio necesita que una OC "congele" la
+> tarifa vigente al momento de la carga, hay que decidirlo explícitamente y
+> pasar a un modelo de snapshot.
+
+**Tabla de OC: agrupada por SolPed + sorting por radio-group.** El listado
+desktop de OC **no** usa `<table mat-table>` (a diferencia de Perfiles SAP/
+Consultores/PEPs) sino una tabla HTML nativa (`ocs-panel.html`) — porque
+necesita mezclar libremente filas de "encabezado de grupo" con filas de
+datos, algo que el `when` predicate de `*matRowDef` no maneja bien sin luchar
+contra el type-checking estricto de los templates. El orden no se elige
+clickeando columnas: hay un `mat-radio-group` arriba de la tabla ("Ordenar
+por") con 5 opciones — **SolPed, Número OC, Consultor, Proveedor,
+Responsable** — y la tabla (y las cards de mobile, que comparten el mismo
+signal `sortedOcs`) se reordena en vivo al cambiar la selección. El
+comportamiento de agrupado: mientras el criterio activo es "SolPed" (default
+al entrar al panel) las filas se agrupan visualmente por SolPed con una fila
+separadora por grupo y las posiciones ordenadas dentro de cada grupo; con
+cualquier otro criterio la tabla se muestra plana — agrupar dejaría de tener
+sentido visual si el orden ya no sigue el SolPed. Los empates dentro de un
+mismo criterio (ej. dos OC del mismo Proveedor) se desempatan siempre por
+SolPed+Posición, para que el orden no "salte" entre recargas.
+
+**Copiar una posición.** Cada fila de la tabla (y cada card en mobile) tiene,
+junto al lápiz de editar, un botón "Copiar" (ícono `content_copy`) que abre
+el dialog de alta con SolPed, Número OC, Consultor y meses de validez
+precargados desde esa fila — Posición, PEP y Cantidad de horas quedan vacíos
+a propósito, para cargar la siguiente posición del mismo SolPed sin repetir
+los datos que no cambian. Es un dialog de **alta** (no edición): no tiene
+botón Eliminar y al guardar crea una OC nueva, no modifica la original.
+Implementado con un campo `copyFrom?: Oc | null` en `OcFormDialogData`
+(`oc: null` sigue significando "no es edición"; `copyFrom` es solo una
+fuente de precarga) — ver el gotcha de qué campos usan qué fuente en
+CLAUDE.md antes de agregar un campo nuevo al formulario.
+
+**Estado de la posición: Pendiente/Completada.** Cada OC tiene un campo
+`completada: boolean` (default `false` = Pendiente) que **no** se pide en el
+dialog de alta/edición — se togglea directo desde un `mat-slide-toggle` en
+la columna "Estado" de la tabla (y en las cards de mobile). Pega contra un
+endpoint dedicado, `PATCH /master-data/ocs/:id/completada` con body
+`{ completada: boolean }`, en vez de reusar el `PATCH /master-data/ocs/:id`
+genérico (que espera el DTO completo de create/update) — así togglear el
+estado no obliga a reenviar SolPed/PEP/Consultor/meses solo para cambiar un
+booleano. Si falla la request, el slide-toggle vuelve a su estado anterior
+(`event.source.checked = !completada` en el `error` del subscribe) para que
+la UI no quede mostrando un estado que no se guardó.
+
+**Ajustar los enums/campos a futuro**: los enums de Consultores, Perfiles SAP,
+PEPs y el array
 `MESES` de PEPs se definen dos veces a propósito (backend y frontend, sin
 paquete compartido en este monorepo) — ver detalle en CLAUDE.md.
 
@@ -281,10 +432,25 @@ npm run prepare
 ## Pendiente
 
 - Definir alcance de "Olvidé mi contraseña" (excluido a pedido).
-- Datos Maestros: agregar el sub-módulo de OC (solapa "3- OC" del Excel),
-  siguiendo el mismo patrón que Consultores/PEPs.
-- PEPs: cuando se integren Recepciones/OC, evaluar agregar TTL IMPUTADO / TTL
-  DISPONIBLE (hoy solo existe el presupuesto planificado).
+- Evaluar migrar los Consultores/PEPs existentes que quedaron sin
+  `perfilSap`/`pais` (creados antes de agregar esos campos) para que dejen de
+  mostrar `—` en la tabla.
+- OC: evaluar si conviene snapshotear Perfil SAP/Tarifa/Proveedor/Responsable
+  al crear la OC en vez de leerlos siempre en vivo desde el Consultor (ver
+  nota de diseño en la sección "OC" de este README).
+- OC: no hay validación de que `pep`/`consultor` sigan existiendo al momento
+  de borrarlos desde sus propios ABM — borrar un Consultor o PEP referenciado
+  por una OC no está bloqueado, la OC queda con esa referencia en `null`
+  (mismo comportamiento defensivo que ya existe para datos legacy sin
+  `perfilSap`/`pais`). No se implementó integridad referencial porque
+  generaría una dependencia circular de módulos (`ConsultoresModule` /
+  `PepsModule` tendrían que importar `OcsModule`, que ya los importa a
+  ellos) y no fue pedido explícitamente.
+- OC: no se agregaron fechas de validez, reparto en hasta 3 PEPs con
+  porcentaje, ni el flag "Activo p/elegir?" que sí tiene el Excel — quedó
+  fuera de alcance a pedido explícito del usuario.
+- PEPs: cuando se integren Recepciones/OC (ya cargadas), evaluar agregar TTL
+  IMPUTADO / TTL DISPONIBLE (hoy solo existe el presupuesto planificado).
 - Página "Recepciones" (`/order_recepcions`): todavía es un placeholder en
   blanco.
 - Evaluar si el CRUD de Datos Maestros debería restringirse a rol ADMIN

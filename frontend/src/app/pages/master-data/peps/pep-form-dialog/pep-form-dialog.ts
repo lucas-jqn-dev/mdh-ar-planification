@@ -5,12 +5,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { map } from 'rxjs';
 import {
   MESES,
+  Pais,
   Pep,
   PepPayload,
   PresupuestoMensual,
@@ -35,6 +37,7 @@ type PresupuestoMensualFormGroup = FormGroup<{
 interface PepForm {
   pepId: FormControl<string>;
   descripcion: FormControl<string>;
+  pais: FormControl<Pais | null>;
   presupuestoMensual: PresupuestoMensualFormGroup;
 }
 
@@ -61,6 +64,7 @@ function buildPresupuestoMensualGroup(inicial: PresupuestoMensual): PresupuestoM
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -75,6 +79,7 @@ export class PepFormDialog {
 
   readonly meses = MESES;
   readonly formatMonto = formatMonto;
+  readonly paisOptions = Object.values(Pais);
 
   readonly isEditMode = this.data.pep !== null;
   readonly saving = signal(false);
@@ -90,6 +95,9 @@ export class PepFormDialog {
     descripcion: new FormControl(this.data.pep?.descripcion ?? '', {
       nonNullable: true,
       validators: [Validators.maxLength(500)],
+    }),
+    pais: new FormControl<Pais | null>(this.data.pep?.pais ?? null, {
+      validators: Validators.required,
     }),
     presupuestoMensual: buildPresupuestoMensualGroup(
       this.data.pep?.presupuestoMensual ?? crearPresupuestoMensualVacio(),
@@ -115,6 +123,7 @@ export class PepFormDialog {
     const payload: PepPayload = {
       pepId: this.form.controls.pepId.value.trim(),
       descripcion: descripcion || undefined,
+      pais: this.form.controls.pais.value!,
       presupuestoMensual: this.form.controls.presupuestoMensual.getRawValue(),
     };
 

@@ -1,0 +1,114 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar perfil SAP' : 'Nuevo perfil SAP' }}</h2>
+
+<mat-dialog-content>
+  @if (!confirmingDelete()) {
+    <form [formGroup]="form" class="perfil-sap-form" novalidate>
+      <mat-form-field appearance="outline" class="perfil-sap-field">
+        <mat-label>Código SAP</mat-label>
+        <input matInput formControlName="codigoSap" autocomplete="off" />
+        @if (form.controls.codigoSap.touched && form.controls.codigoSap.hasError('required')) {
+          <mat-error>El código SAP es obligatorio</mat-error>
+        }
+        @if (form.controls.codigoSap.touched && form.controls.codigoSap.hasError('maxlength')) {
+          <mat-error>Máximo 30 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="perfil-sap-field">
+        <mat-label>Descripción</mat-label>
+        <input matInput formControlName="descripcion" autocomplete="off" />
+        @if (form.controls.descripcion.touched && form.controls.descripcion.hasError('required')) {
+          <mat-error>La descripción es obligatoria</mat-error>
+        }
+        @if (form.controls.descripcion.touched && form.controls.descripcion.hasError('minlength')) {
+          <mat-error>Ingresá al menos 2 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="perfil-sap-field">
+        <mat-label>Tarifa hora</mat-label>
+        <input matInput type="number" min="0" step="1" formControlName="tarifaHora" />
+        @if (form.controls.tarifaHora.touched && form.controls.tarifaHora.hasError('required')) {
+          <mat-error>La tarifa hora es obligatoria</mat-error>
+        }
+        @if (form.controls.tarifaHora.touched && form.controls.tarifaHora.hasError('min')) {
+          <mat-error>Debe ser mayor o igual a 0</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="perfil-sap-field">
+        <mat-label>Proveedor</mat-label>
+        <mat-select formControlName="proveedor">
+          @for (option of proveedorOptions; track option) {
+            <mat-option [value]="option">{{ option }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.proveedor.touched && form.controls.proveedor.hasError('required')) {
+          <mat-error>Seleccioná un proveedor</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="perfil-sap-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </form>
+  } @else {
+    <p class="delete-confirm-text" role="alert">
+      ¿Eliminar el perfil <strong>{{ data.perfilSap?.codigoSap }}</strong>? Esta acción no se puede
+      deshacer.
+    </p>
+    @if (errorMessage()) {
+      <p class="perfil-sap-error" role="alert">{{ errorMessage() }}</p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="perfil-sap-actions">
+  @if (confirmingDelete()) {
+    <button mat-stroked-button type="button" (click)="cancelDeleteConfirmation()" [disabled]="deleting()">
+      Volver
+    </button>
+    <span class="perfil-sap-actions-spacer"></span>
+    <button
+      mat-flat-button
+      color="warn"
+      type="button"
+      class="perfil-sap-submit"
+      (click)="confirmDelete()"
+      [disabled]="deleting()"
+    >
+      @if (deleting()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>Confirmar eliminación</span>
+    </button>
+  } @else {
+    @if (isEditMode) {
+      <button
+        mat-button
+        color="warn"
+        type="button"
+        (click)="askDeleteConfirmation()"
+        [disabled]="saving()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar
+      </button>
+    }
+    <span class="perfil-sap-actions-spacer"></span>
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="perfil-sap-submit"
+      (click)="submit()"
+      [disabled]="form.invalid || saving()"
+    >
+      @if (saving()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>{{ isEditMode ? 'Guardar cambios' : 'Crear' }}</span>
+    </button>
+  }
+</mat-dialog-actions>

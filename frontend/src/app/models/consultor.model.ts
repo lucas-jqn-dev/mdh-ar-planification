@@ -1,3 +1,5 @@
+import { PerfilSap } from './perfil-sap.model';
+
 /**
  * Valores iniciales tomados de la solapa "1- Consultores" del planificador
  * Excel. Son ajustables: agregar/quitar miembros del enum a medida que
@@ -7,6 +9,7 @@
 export enum Proveedor {
   ADVANCED = 'ADVANCED',
   BRIGHTSIDE = 'BRIGHTSIDE',
+  FRICE = 'FRICE',
   MAGNO = 'MAGNO',
   NEORIS = 'NEORIS',
   RRHH_Y_SOL_TEC = 'RRHH Y SOL. TEC',
@@ -32,8 +35,12 @@ export interface Consultor {
   proveedor: Proveedor;
   equipo: Equipo;
   responsable: Responsable;
+  /** null en registros creados antes de agregar este campo (no migrados). */
+  perfilSap: PerfilSap | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type ConsultorPayload = Pick<Consultor, 'nombre' | 'proveedor' | 'equipo' | 'responsable'>;
+export type ConsultorPayload = Pick<Consultor, 'nombre' | 'proveedor' | 'equipo' | 'responsable'> & {
+  perfilSapId: string;
+};

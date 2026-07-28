@@ -33,7 +33,7 @@ export class PepsPanel {
 
   readonly isHandset = injectIsHandset();
   readonly formatMonto = formatMonto;
-  readonly displayedColumns = ['pepId', 'descripcion', 'presupuestoTotal', 'acciones'];
+  readonly displayedColumns = ['pepId', 'descripcion', 'pais', 'presupuestoTotal', 'acciones'];
 
   readonly peps = signal<Pep[]>([]);
   readonly loading = signal(true);

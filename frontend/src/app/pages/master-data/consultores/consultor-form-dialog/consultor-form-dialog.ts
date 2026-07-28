@@ -14,6 +14,8 @@ import {
   Proveedor,
   Responsable,
 } from '../../../../models/consultor.model';
+import { PerfilSap } from '../../../../models/perfil-sap.model';
+import { PerfilesSapService } from '../../perfiles-sap/perfiles-sap.service';
 import { ConsultoresService } from '../consultores.service';
 
 export interface ConsultorFormDialogData {
@@ -29,6 +31,7 @@ interface ConsultorForm {
   proveedor: FormControl<Proveedor | null>;
   equipo: FormControl<Equipo | null>;
   responsable: FormControl<Responsable | null>;
+  perfilSapId: FormControl<string | null>;
 }
 
 const SAVE_ERROR_MESSAGE = 'No pudimos guardar los cambios. Intenta nuevamente.';
@@ -53,11 +56,14 @@ const DELETE_ERROR_MESSAGE = 'No pudimos eliminar el consultor. Intenta nuevamen
 export class ConsultorFormDialog {
   private readonly dialogRef = inject(MatDialogRef<ConsultorFormDialog, ConsultorDialogResult>);
   private readonly consultoresService = inject(ConsultoresService);
+  private readonly perfilesSapService = inject(PerfilesSapService);
   protected readonly data = inject<ConsultorFormDialogData>(MAT_DIALOG_DATA);
 
   readonly proveedorOptions = Object.values(Proveedor);
   readonly equipoOptions = Object.values(Equipo);
   readonly responsableOptions = Object.values(Responsable);
+  readonly perfilesSap = signal<PerfilSap[]>([]);
+  readonly loadingPerfilesSap = signal(true);
 
   readonly isEditMode = this.data.consultor !== null;
   readonly saving = signal(false);
@@ -79,7 +85,22 @@ export class ConsultorFormDialog {
     responsable: new FormControl<Responsable | null>(this.data.consultor?.responsable ?? null, {
       validators: Validators.required,
     }),
+    perfilSapId: new FormControl<string | null>(this.data.consultor?.perfilSap?.id ?? null, {
+      validators: Validators.required,
+    }),
   });
+
+  constructor() {
+    this.perfilesSapService.list().subscribe({
+      next: (perfilesSap) => {
+        this.perfilesSap.set(perfilesSap);
+        this.loadingPerfilesSap.set(false);
+      },
+      error: () => {
+        this.loadingPerfilesSap.set(false);
+      },
+    });
+  }
 
   submit(): void {
     if (this.form.invalid || this.saving()) {
@@ -92,6 +113,7 @@ export class ConsultorFormDialog {
       proveedor: this.form.controls.proveedor.value!,
       equipo: this.form.controls.equipo.value!,
       responsable: this.form.controls.responsable.value!,
+      perfilSapId: this.form.controls.perfilSapId.value!,
     };
 
     this.errorMessage.set(null);

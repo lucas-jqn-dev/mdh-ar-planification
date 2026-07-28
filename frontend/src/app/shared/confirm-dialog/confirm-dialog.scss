@@ -1,0 +1,15 @@
+.confirm-dialog-message {
+  margin: 0;
+  font: var(--mat-sys-body-large);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem 1.25rem;
+}
+
+.confirm-dialog-spacer {
+  flex: 1 1 auto;
+}

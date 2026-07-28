@@ -37,7 +37,7 @@ export class ConsultoresPanel {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly isHandset = injectIsHandset();
-  readonly displayedColumns = ['proveedor', 'nombre', 'equipo', 'responsable', 'acciones'];
+  readonly displayedColumns = ['proveedor', 'nombre', 'equipo', 'responsable', 'perfilSap', 'acciones'];
 
   readonly consultores = signal<Consultor[]>([]);
   readonly loading = signal(true);

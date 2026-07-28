@@ -22,6 +22,18 @@
         }
       </mat-form-field>
 
+      <mat-form-field appearance="outline" class="pep-field">
+        <mat-label>País</mat-label>
+        <mat-select formControlName="pais">
+          @for (option of paisOptions; track option) {
+            <mat-option [value]="option">{{ option }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.pais.touched && form.controls.pais.hasError('required')) {
+          <mat-error>Seleccioná un país</mat-error>
+        }
+      </mat-form-field>
+
       <div class="pep-months" formGroupName="presupuestoMensual">
         <h3 class="pep-months-title">Presupuesto planificado mensual</h3>
         <div class="pep-months-grid">

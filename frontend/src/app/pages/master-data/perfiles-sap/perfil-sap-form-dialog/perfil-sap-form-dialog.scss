@@ -1,0 +1,40 @@
+.perfil-sap-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.perfil-sap-field {
+  width: 100%;
+}
+
+.perfil-sap-error {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  font: var(--mat-sys-body-medium);
+}
+
+.delete-confirm-text {
+  font: var(--mat-sys-body-large);
+}
+
+.perfil-sap-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem 1.25rem;
+}
+
+.perfil-sap-actions-spacer {
+  flex: 1 1 auto;
+}
+
+.perfil-sap-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

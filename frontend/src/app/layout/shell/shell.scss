@@ -4,6 +4,32 @@
 
 .shell-sidenav {
   width: 15rem;
+  transition: width 200ms ease;
+  background-color: var(--mat-sys-primary);
+}
+
+.shell-sidenav--collapsed {
+  width: 4.5rem;
+}
+
+.shell-sidenav--collapsed .mat-mdc-list-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.shell-sidenav--collapsed .mat-mdc-list-item-icon {
+  margin: 0;
+}
+
+/* Sin título, `.mdc-list-item__content` queda vacío pero sigue siendo un
+   flex item con flex:1 (CSS propio de MDC) que se come todo el espacio y
+   empuja el ícono al borde izquierdo, ignorando el justify-content:center
+   de arriba. Ese span lo renderiza el template interno de MatListItem, no
+   el de este componente, así que el encapsulamiento de estilos de Angular
+   no lo deja alcanzar sin ::ng-deep (deprecado, pero es la única forma
+   documentada de estilar DOM interno de un componente de terceros). */
+.shell-sidenav--collapsed ::ng-deep .mdc-list-item__content {
+  display: none;
 }
 
 .shell-toolbar {

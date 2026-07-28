@@ -1,0 +1,86 @@
+<div class="panel-toolbar">
+  <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Nuevo perfil SAP
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="panel-state">
+    <mat-spinner diameter="32" />
+  </div>
+} @else if (errorMessage()) {
+  <div class="panel-state" role="alert">
+    <p>{{ errorMessage() }}</p>
+  </div>
+} @else if (perfilesSap().length === 0) {
+  <div class="panel-state">
+    <p>Todavía no hay perfiles SAP cargados.</p>
+  </div>
+} @else if (isHandset()) {
+  <div class="perfil-sap-cards">
+    @for (perfilSap of perfilesSap(); track perfilSap.id) {
+      <mat-card class="perfil-sap-card">
+        <div class="perfil-sap-card-header">
+          <span class="perfil-sap-card-codigo">{{ perfilSap.codigoSap }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar ' + perfilSap.codigoSap"
+            (click)="openEditDialog(perfilSap)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </div>
+        <p class="perfil-sap-card-descripcion">{{ perfilSap.descripcion }}</p>
+        <dl class="perfil-sap-card-details">
+          <dt>Tarifa hora</dt>
+          <dd>{{ formatMonto(perfilSap.tarifaHora) }}</dd>
+          <dt>Proveedor</dt>
+          <dd>{{ perfilSap.proveedor }}</dd>
+        </dl>
+      </mat-card>
+    }
+  </div>
+} @else {
+  <div class="panel-table-wrapper">
+    <table mat-table [dataSource]="perfilesSap()" class="panel-table">
+      <ng-container matColumnDef="codigoSap">
+        <th mat-header-cell *matHeaderCellDef>Código SAP</th>
+        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.codigoSap }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="descripcion">
+        <th mat-header-cell *matHeaderCellDef>Descripción</th>
+        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.descripcion }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="tarifaHora">
+        <th mat-header-cell *matHeaderCellDef>Tarifa hora</th>
+        <td mat-cell *matCellDef="let perfilSap">{{ formatMonto(perfilSap.tarifaHora) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="proveedor">
+        <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.proveedor }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
+        <td mat-cell *matCellDef="let perfilSap">
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar ' + perfilSap.codigoSap"
+            (click)="openEditDialog(perfilSap)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+}

@@ -1,0 +1,167 @@
+<div class="panel-toolbar">
+  <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Nueva OC
+  </button>
+</div>
+
+@if (!loading() && !errorMessage() && ocs().length > 0) {
+  <div class="oc-sort-bar">
+    <span class="oc-sort-label">Ordenar por</span>
+    <mat-radio-group
+      class="oc-sort-group"
+      [ngModel]="sortKey()"
+      (ngModelChange)="sortKey.set($event)"
+    >
+      @for (option of sortOptions; track option.value) {
+        <mat-radio-button [value]="option.value">{{ option.label }}</mat-radio-button>
+      }
+    </mat-radio-group>
+  </div>
+}
+
+@if (loading()) {
+  <div class="panel-state">
+    <mat-spinner diameter="32" />
+  </div>
+} @else if (errorMessage()) {
+  <div class="panel-state" role="alert">
+    <p>{{ errorMessage() }}</p>
+  </div>
+} @else if (ocs().length === 0) {
+  <div class="panel-state">
+    <p>Todavía no hay OC cargadas.</p>
+  </div>
+} @else if (isHandset()) {
+  <div class="oc-cards">
+    @for (oc of sortedOcs(); track oc.id) {
+      <mat-card class="oc-card">
+        <div class="oc-card-header">
+          <span class="oc-card-title">SolPed {{ oc.solped }} · Pos. {{ oc.posicion }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Copiar SolPed ' + oc.solped"
+            (click)="openCopyDialog(oc)"
+          >
+            <mat-icon>content_copy</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar SolPed ' + oc.solped"
+            (click)="openEditDialog(oc)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </div>
+        <div class="oc-card-status">
+          <mat-slide-toggle
+            [checked]="oc.completada"
+            (change)="toggleCompletada(oc, $event)"
+          >
+            {{ oc.completada ? 'Completada' : 'Pendiente' }}
+          </mat-slide-toggle>
+        </div>
+        <dl class="oc-card-details">
+          <dt>Número OC</dt>
+          <dd>{{ oc.numeroOc || '—' }}</dd>
+          <dt>Validez</dt>
+          <dd>{{ formatMesAnio(oc.mesDesde) }} a {{ formatMesAnio(oc.mesHasta) }}</dd>
+          <dt>PEP</dt>
+          <dd>{{ oc.pep ? oc.pep.pepId : '—' }}</dd>
+          <dt>Cantidad de horas</dt>
+          <dd>{{ oc.cantidadHoras }}</dd>
+          <dt>Consultor</dt>
+          <dd>{{ oc.consultor ? oc.consultor.nombre : '—' }}</dd>
+          <dt>Perfil SAP</dt>
+          <dd>{{ oc.consultor?.perfilSap ? oc.consultor!.perfilSap!.codigoSap : '—' }}</dd>
+          <dt>Tarifa hora</dt>
+          <dd>{{ oc.consultor?.perfilSap ? formatMonto(oc.consultor!.perfilSap!.tarifaHora) : '—' }}</dd>
+          <dt>Total posición</dt>
+          <dd>{{ totalPosicion(oc) !== null ? formatMonto(totalPosicion(oc)!) : '—' }}</dd>
+          <dt>Proveedor</dt>
+          <dd>{{ oc.consultor ? oc.consultor.proveedor : '—' }}</dd>
+          <dt>Responsable</dt>
+          <dd>{{ oc.consultor ? oc.consultor.responsable : '—' }}</dd>
+        </dl>
+      </mat-card>
+    }
+  </div>
+} @else {
+  <div class="panel-table-wrapper">
+    <table class="panel-table oc-table">
+      <thead>
+        <tr>
+          <th>SolPed</th>
+          <th>Posición</th>
+          <th>Número OC</th>
+          <th>PEP</th>
+          <th>Cant. horas</th>
+          <th>Consultor</th>
+          <th>Perfil SAP</th>
+          <th>Tarifa hora</th>
+          <th>Total posición</th>
+          <th>Proveedor</th>
+          <th>Responsable</th>
+          <th>Mes desde</th>
+          <th>Mes hasta</th>
+          <th>Estado</th>
+          <th aria-label="Acciones"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.solped : row.id) {
+          @if (isGroupRow(row)) {
+            <tr class="oc-group-row">
+              <td [attr.colspan]="columnCount">SolPed {{ row.solped }}</td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ row.solped }}</td>
+              <td>{{ row.posicion }}</td>
+              <td>{{ row.numeroOc || '—' }}</td>
+              <td>{{ row.pep ? row.pep.pepId : '—' }}</td>
+              <td>{{ row.cantidadHoras }}</td>
+              <td>{{ row.consultor ? row.consultor.nombre : '—' }}</td>
+              <td>{{ row.consultor?.perfilSap ? row.consultor!.perfilSap!.codigoSap : '—' }}</td>
+              <td>{{ row.consultor?.perfilSap ? formatMonto(row.consultor!.perfilSap!.tarifaHora) : '—' }}</td>
+              <td>{{ totalPosicion(row) !== null ? formatMonto(totalPosicion(row)!) : '—' }}</td>
+              <td>{{ row.consultor ? row.consultor.proveedor : '—' }}</td>
+              <td>{{ row.consultor ? row.consultor.responsable : '—' }}</td>
+              <td>{{ formatMesAnio(row.mesDesde) }}</td>
+              <td>{{ formatMesAnio(row.mesHasta) }}</td>
+              <td>
+                <mat-slide-toggle
+                  [checked]="row.completada"
+                  [attr.aria-label]="'Marcar SolPed ' + row.solped + ' como ' + (row.completada ? 'pendiente' : 'completada')"
+                  (change)="toggleCompletada(row, $event)"
+                >
+                  {{ row.completada ? 'Completada' : 'Pendiente' }}
+                </mat-slide-toggle>
+              </td>
+              <td class="oc-table-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Copiar SolPed ' + row.solped"
+                  (click)="openCopyDialog(row)"
+                >
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Editar SolPed ' + row.solped"
+                  (click)="openEditDialog(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

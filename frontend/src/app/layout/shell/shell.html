@@ -2,6 +2,7 @@
   <mat-sidenav
     #drawer
     class="shell-sidenav"
+    [class.shell-sidenav--collapsed]="collapsed() && !isHandset()"
     [mode]="isHandset() ? 'over' : 'side'"
     [opened]="!isHandset()"
   >
@@ -11,10 +12,13 @@
           mat-list-item
           [routerLink]="item.path"
           routerLinkActive="active-link"
+          [attr.aria-label]="collapsed() && !isHandset() ? item.label : null"
           (click)="isHandset() && drawer.close()"
         >
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
+          @if (!collapsed() || isHandset()) {
+            <span matListItemTitle>{{ item.label }}</span>
+          }
         </a>
       }
     </mat-nav-list>
@@ -26,11 +30,20 @@
         <button mat-icon-button type="button" (click)="drawer.toggle()" aria-label="Abrir menú">
           <mat-icon>menu</mat-icon>
         </button>
+      } @else {
+        <button
+          mat-icon-button
+          type="button"
+          (click)="toggleCollapsed()"
+          [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Contraer menú'"
+        >
+          <mat-icon>{{ collapsed() ? 'menu_open' : 'menu' }}</mat-icon>
+        </button>
       }
       <!-- <span class="shell-logo-badge">
         <img class="shell-logo" src="images/logo-easy.png" alt="Easy Cencosud" />
       </span> -->
-      <span class="shell-title">MDH AR • Planificador</span>
+      <span class="shell-title">MDH AR • Planificador Presupuestos</span>
       <span class="shell-spacer"></span>
       @if (currentUser(); as user) {
         <span class="shell-user">{{ user.firstName }} {{ user.lastName }}</span>

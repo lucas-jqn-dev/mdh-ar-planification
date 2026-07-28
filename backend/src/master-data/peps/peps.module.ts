@@ -8,5 +8,6 @@ import { PepsService } from './peps.service';
   imports: [MongooseModule.forFeature([{ name: Pep.name, schema: PepSchema }])],
   controllers: [PepsController],
   providers: [PepsService],
+  exports: [MongooseModule],
 })
 export class PepsModule {}

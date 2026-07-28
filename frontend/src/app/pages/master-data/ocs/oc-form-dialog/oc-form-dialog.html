@@ -1,0 +1,193 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar OC' : 'Nueva OC' }}</h2>
+
+<mat-dialog-content>
+  @if (!confirmingDelete()) {
+    <form [formGroup]="form" class="oc-form" novalidate>
+      <mat-form-field appearance="outline" class="oc-field">
+        <mat-label>SolPed</mat-label>
+        <input matInput formControlName="solped" autocomplete="off" />
+        @if (form.controls.solped.touched && form.controls.solped.hasError('required')) {
+          <mat-error>El número de SolPed es obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field oc-field-half">
+        <mat-label>Posición</mat-label>
+        <input matInput type="number" min="0" step="1" formControlName="posicion" />
+        @if (form.controls.posicion.touched && form.controls.posicion.hasError('required')) {
+          <mat-error>La posición es obligatoria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field oc-field-half">
+        <mat-label>Número OC (opcional)</mat-label>
+        <input matInput formControlName="numeroOc" autocomplete="off" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field">
+        <mat-label>PEP</mat-label>
+        <mat-select formControlName="pepId">
+          @for (option of peps(); track option.id) {
+            <mat-option [value]="option.id">{{ pepLabel(option) }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.pepId.touched && form.controls.pepId.hasError('required')) {
+          <mat-error>Seleccioná un PEP</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field">
+        <mat-label>Cantidad de horas</mat-label>
+        <input matInput type="number" min="0" step="1" formControlName="cantidadHoras" />
+        @if (form.controls.cantidadHoras.touched && form.controls.cantidadHoras.hasError('required')) {
+          <mat-error>La cantidad de horas es obligatoria</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field oc-field-half">
+        <mat-label>Mes desde</mat-label>
+        <input
+          matInput
+          readonly
+          [matDatepicker]="mesDesdePicker"
+          formControlName="mesDesde"
+          (click)="mesDesdePicker.open()"
+        />
+        <mat-datepicker-toggle matSuffix [for]="mesDesdePicker" />
+        <mat-datepicker
+          #mesDesdePicker
+          startView="multi-year"
+          (monthSelected)="chosenMonthHandlerDesde($event, mesDesdePicker)"
+        />
+        @if (form.controls.mesDesde.touched && form.controls.mesDesde.hasError('required')) {
+          <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="oc-field oc-field-half">
+        <mat-label>Mes hasta</mat-label>
+        <input
+          matInput
+          readonly
+          [matDatepicker]="mesHastaPicker"
+          formControlName="mesHasta"
+          (click)="mesHastaPicker.open()"
+        />
+        <mat-datepicker-toggle matSuffix [for]="mesHastaPicker" />
+        <mat-datepicker
+          #mesHastaPicker
+          startView="multi-year"
+          (monthSelected)="chosenMonthHandlerHasta($event, mesHastaPicker)"
+        />
+        @if (form.controls.mesHasta.touched && form.controls.mesHasta.hasError('required')) {
+          <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      @if (form.hasError(mesRangeError) && form.controls.mesHasta.touched) {
+        <p class="oc-error" role="alert">
+          El mes de finalización debe ser igual o posterior al mes de inicio.
+        </p>
+      }
+
+      <mat-form-field appearance="outline" class="oc-field">
+        <mat-label>Consultor</mat-label>
+        <mat-select formControlName="consultorId">
+          @for (option of consultores(); track option.id) {
+            <mat-option [value]="option.id">{{ consultorLabel(option) }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.consultorId.touched && form.controls.consultorId.hasError('required')) {
+          <mat-error>Seleccioná un consultor</mat-error>
+        }
+        @if (!loadingOptions() && consultores().length === 0) {
+          <mat-hint>No hay consultores cargados todavía.</mat-hint>
+        }
+      </mat-form-field>
+
+      @if (selectedConsultor(); as consultor) {
+        <div class="oc-derived">
+          <h3 class="oc-derived-title">Datos del consultor</h3>
+          <dl class="oc-derived-details">
+            <dt>Perfil SAP</dt>
+            <dd>
+              {{ consultor.perfilSap ? consultor.perfilSap.codigoSap + ' — ' + consultor.perfilSap.descripcion : '—' }}
+            </dd>
+            <dt>Tarifa hora</dt>
+            <dd>{{ consultor.perfilSap ? formatMonto(consultor.perfilSap.tarifaHora) : '—' }}</dd>
+            <dt>Proveedor</dt>
+            <dd>{{ consultor.proveedor }}</dd>
+            <dt>Responsable</dt>
+            <dd>{{ consultor.responsable }}</dd>
+            @if (totalPosicion(); as total) {
+              <dt>Total de la posición</dt>
+              <dd class="oc-derived-total">{{ formatMonto(total) }}</dd>
+            }
+          </dl>
+        </div>
+      }
+
+      @if (errorMessage()) {
+        <p class="oc-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </form>
+  } @else {
+    <p class="delete-confirm-text" role="alert">
+      ¿Eliminar la OC de SolPed <strong>{{ data.oc?.solped }}</strong>, posición
+      <strong>{{ data.oc?.posicion }}</strong>? Esta acción no se puede deshacer.
+    </p>
+    @if (errorMessage()) {
+      <p class="oc-error" role="alert">{{ errorMessage() }}</p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="oc-actions">
+  @if (confirmingDelete()) {
+    <button mat-stroked-button type="button" (click)="cancelDeleteConfirmation()" [disabled]="deleting()">
+      Volver
+    </button>
+    <span class="oc-actions-spacer"></span>
+    <button
+      mat-flat-button
+      color="warn"
+      type="button"
+      class="oc-submit"
+      (click)="confirmDelete()"
+      [disabled]="deleting()"
+    >
+      @if (deleting()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>Confirmar eliminación</span>
+    </button>
+  } @else {
+    @if (isEditMode) {
+      <button
+        mat-button
+        color="warn"
+        type="button"
+        (click)="askDeleteConfirmation()"
+        [disabled]="saving()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar
+      </button>
+    }
+    <span class="oc-actions-spacer"></span>
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="oc-submit"
+      (click)="submit()"
+      [disabled]="form.invalid || saving()"
+    >
+      @if (saving()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>{{ isEditMode ? 'Guardar cambios' : 'Crear' }}</span>
+    </button>
+  }
+</mat-dialog-actions>

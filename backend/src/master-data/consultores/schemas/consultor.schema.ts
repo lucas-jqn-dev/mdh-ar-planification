@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { PerfilSap } from '../../perfiles-sap/schemas/perfil-sap.schema';
+import { normalizePopulatedRef } from '../../shared/normalize-populated-ref.util';
 
 /**
  * Valores iniciales tomados de la solapa "1- Consultores" del planificador
@@ -9,6 +11,7 @@ import { HydratedDocument } from 'mongoose';
 export enum ProveedorConsultor {
   ADVANCED = 'ADVANCED',
   BRIGHTSIDE = 'BRIGHTSIDE',
+  FRICE = 'FRICE',
   MAGNO = 'MAGNO',
   NEORIS = 'NEORIS',
   RRHH_Y_SOL_TEC = 'RRHH Y SOL. TEC',
@@ -39,6 +42,7 @@ export type ConsultorDocument = HydratedDocument<Consultor>;
     transform: (_doc, ret: Record<string, unknown>) => {
       ret.id = String(ret._id);
       delete ret._id;
+      normalizePopulatedRef(ret.perfilSap);
     },
   },
 })
@@ -54,6 +58,10 @@ export class Consultor {
 
   @Prop({ type: String, enum: ResponsableConsultor, required: true })
   responsable: ResponsableConsultor;
+
+  /** Perfil SAP asignado al consultor (ref a PerfilSap), obligatorio. */
+  @Prop({ type: Types.ObjectId, ref: PerfilSap.name, required: true })
+  perfilSap: Types.ObjectId;
 
   createdAt?: Date;
   updatedAt?: Date;
