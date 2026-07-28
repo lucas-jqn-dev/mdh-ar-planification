@@ -340,6 +340,39 @@ cantidadHoras`, recalculado en vivo a medida que se completa el formulario).
 > tarifa vigente al momento de la carga, hay que decidirlo explícitamente y
 > pasar a un modelo de snapshot.
 
+**Presupuesto mensual de la OC.** Cada OC tiene, además, `presupuestoMensual`
+— mismo shape que `Pep.presupuestoMensual` (12 montos numéricos, uno por mes,
+reusado directo desde `peps/schemas/pep.schema.ts` en vez de duplicarlo), pero
+acá **no se carga a mano**: el backend lo recalcula por completo en cada
+`create`/`update` de la OC. El cálculo toma el **Total de la posición**
+(`tarifaHora` del Perfil SAP del Consultor × `cantidadHoras`) y lo reparte en
+partes iguales entre los meses del rango `mesDesde`–`mesHasta` (ambos
+inclusive). Ejemplo: una OC de $1.000.000 con `mesDesde="2026-07"` y
+`mesHasta="2026-09"` cubre 3 meses (julio, agosto, septiembre) → cada uno
+recibe $333.333,33. El resto de los meses queda en `0`. Si el Consultor no
+tiene Perfil SAP asociado (dato legacy sin `perfilSap` — ver más arriba),
+`tarifaHora` no existe y todo el reparto queda en `0`, igual criterio que usa
+el "Total de la posición" del frontend para mostrar `—`.
+
+- **Backend**: `backend/src/master-data/ocs/oc-presupuesto-mensual.util.ts` —
+  `calcularPresupuestoMensual(mesDesde, mesHasta, montoTotal)` itera el rango
+  de meses (convirtiendo cada `"YYYY-MM"` a una cuenta absoluta de meses para
+  poder recorrer el rango sin manejar `Date`) y devuelve un objeto con los 12
+  meses, sumando `montoTotal / cantidadDeMeses` a cada mes del rango.
+  `OcsService.create`/`update` obtienen `tarifaHora` con una consulta
+  dedicada a `Consultor` (`.populate('perfilSap')`) antes de armar el
+  documento a guardar — es una consulta extra respecto del simple `.exists()`
+  que ya usaba `assertConsultorExists` para validar el ID, a propósito, para
+  no mezclar "validar que existe" con "leer su tarifa".
+  > **Sin dimensión de año**: igual que `Pep.presupuestoMensual`, el objeto
+  > solo tiene 12 claves (`enero`...`diciembre`), sin distinguir a qué año
+  > pertenece cada monto. Una OC cuyo rango cruza fin de año (ej.
+  > `"2026-11"` a `"2027-02"`) reparte igual en noviembre/diciembre/enero/
+  > febrero sin duplicar nombres, pero un rango de más de 12 meses volvería a
+  > sumar sobre el mismo mes más de una vez. Limitación consciente, no un bug
+  > — mismo criterio de simplicidad que el resto de Datos Maestros en esta
+  > etapa.
+
 **Tabla de OC: agrupada según el criterio de sorting activo.** El listado
 desktop de OC **no** usa `<table mat-table>` (a diferencia de Perfiles SAP/
 Consultores/PEPs) sino una tabla HTML nativa (`ocs-panel.html`) — porque

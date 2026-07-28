@@ -1,7 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { Consultor } from '../../consultores/schemas/consultor.schema';
-import { Pep } from '../../peps/schemas/pep.schema';
+import {
+  Pep,
+  PresupuestoMensual,
+  PresupuestoMensualSchema,
+} from '../../peps/schemas/pep.schema';
 import { normalizePopulatedRef } from '../../shared/normalize-populated-ref.util';
 
 export type OcDocument = HydratedDocument<Oc>;
@@ -72,6 +76,18 @@ export class Oc {
   /** Estado de la posición: pendiente (default) o completada. Se togglea desde la tabla, no desde el alta/edición. */
   @Prop({ type: Boolean, required: true, default: false })
   completada: boolean;
+
+  /**
+   * Distribución mensual del monto total de la posición (tarifaHora del
+   * Consultor × cantidadHoras), repartido en partes iguales entre los meses
+   * de mesDesde/mesHasta (ambos inclusive). Se recalcula por completo en
+   * cada create/update en `OcsService`, nunca se edita a mano. Reusa el
+   * mismo shape que `Pep.presupuestoMensual` (12 props enero..diciembre,
+   * sin año) — un rango que cruza fin de año no distingue el año, solo
+   * repite el mismo mes (limitación consciente, igual que en Pep).
+   */
+  @Prop({ type: PresupuestoMensualSchema, required: true, default: () => ({}) })
+  presupuestoMensual: PresupuestoMensual;
 
   createdAt?: Date;
   updatedAt?: Date;

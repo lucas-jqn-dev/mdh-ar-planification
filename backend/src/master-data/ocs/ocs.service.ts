@@ -3,12 +3,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateOcDto } from './dto/create-oc.dto';
 import { UpdateOcCompletadaDto } from './dto/update-oc-completada.dto';
+import { calcularPresupuestoMensual } from './oc-presupuesto-mensual.util';
 import { Oc, OcDocument } from './schemas/oc.schema';
 import { Pep, PepDocument } from '../peps/schemas/pep.schema';
 import {
   Consultor,
   ConsultorDocument,
 } from '../consultores/schemas/consultor.schema';
+import type { PerfilSapDocument } from '../perfiles-sap/schemas/perfil-sap.schema';
 
 const NOT_FOUND_MESSAGE = 'OC no encontrada';
 const PEP_NOT_FOUND_MESSAGE = 'PEP no encontrado';
@@ -38,6 +40,8 @@ export class OcsService {
     await this.assertPepExists(dto.pepId);
     await this.assertConsultorExists(dto.consultorId);
 
+    const presupuestoMensual = await this.calcularPresupuestoMensualDto(dto);
+
     const created = await this.ocModel.create({
       solped: dto.solped,
       posicion: dto.posicion,
@@ -47,6 +51,7 @@ export class OcsService {
       consultor: dto.consultorId,
       mesDesde: dto.mesDesde,
       mesHasta: dto.mesHasta,
+      presupuestoMensual,
     });
 
     return created.populate([
@@ -60,6 +65,8 @@ export class OcsService {
     await this.assertPepExists(dto.pepId);
     await this.assertConsultorExists(dto.consultorId);
 
+    const presupuestoMensual = await this.calcularPresupuestoMensualDto(dto);
+
     const updated = await this.ocModel
       .findByIdAndUpdate(
         id,
@@ -72,6 +79,7 @@ export class OcsService {
           consultor: dto.consultorId,
           mesDesde: dto.mesDesde,
           mesHasta: dto.mesHasta,
+          presupuestoMensual,
         },
         { new: true, runValidators: true },
       )
@@ -147,5 +155,27 @@ export class OcsService {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
     }
+  }
+
+  /**
+   * Monto total de la posición (tarifaHora del Consultor × cantidadHoras)
+   * repartido entre los meses de mesDesde/mesHasta del DTO. 0 en todos los
+   * meses si el Consultor no tiene Perfil SAP asociado (dato legacy), igual
+   * criterio que `totalPosicion()` en el frontend.
+   */
+  private async calcularPresupuestoMensualDto(dto: CreateOcDto) {
+    const tarifaHora = await this.getTarifaHora(dto.consultorId);
+    const montoTotal = tarifaHora * dto.cantidadHoras;
+
+    return calcularPresupuestoMensual(dto.mesDesde, dto.mesHasta, montoTotal);
+  }
+
+  private async getTarifaHora(consultorId: string): Promise<number> {
+    const consultor = await this.consultorModel
+      .findById(consultorId)
+      .populate<{ perfilSap: PerfilSapDocument | null }>('perfilSap')
+      .exec();
+
+    return consultor?.perfilSap?.tarifaHora ?? 0;
   }
 }

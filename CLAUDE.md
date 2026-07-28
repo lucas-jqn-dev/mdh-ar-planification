@@ -155,6 +155,29 @@ chicas y verificables.
   simplicidad para esta etapa, no un bug. Si el negocio pide que la OC
   "congele" esos valores, hay que migrar a un modelo de snapshot (copiar los
   valores al crear la OC en vez de poblar en cada lectura).
+- **`Oc.presupuestoMensual` reusa el mismo shape que `Pep.presupuestoMensual`**
+  (`PresupuestoMensual`/`PresupuestoMensualSchema`, importados directo desde
+  `peps/schemas/pep.schema.ts` en vez de duplicarlos — mismo criterio que
+  `ProveedorConsultor` compartido entre Consultor y PerfilSap) pero, a
+  diferencia de Pep, **nunca se carga a mano**: `OcsService.create`/`update`
+  lo recalculan por completo en cada guardado vía
+  `calcularPresupuestoMensual()` (`ocs/oc-presupuesto-mensual.util.ts`), que
+  reparte `tarifaHora × cantidadHoras` en partes iguales entre los meses del
+  rango `mesDesde`–`mesHasta` (inclusive), dejando `0` en el resto. Para leer
+  `tarifaHora` hay una consulta separada a `Consultor` con
+  `.populate('perfilSap')` (`OcsService.getTarifaHora()`) — a propósito
+  distinta de la que ya hace `assertConsultorExists()` con `.exists()` (esa
+  solo valida que el ID exista, no trae el documento). Si el Consultor no
+  tiene `perfilSap` (dato legacy), `tarifaHora` es `0` y el reparto entero
+  queda en `0`, igual criterio que `totalPosicion()` en el frontend
+  mostrando `—`. **Sin dimensión de año**, igual limitación consciente que
+  `Pep.presupuestoMensual`: un rango que cruza fin de año no distingue el
+  año del monto, solo repite el nombre del mes (un rango de más de 12 meses
+  sumaría dos veces sobre el mismo mes — no validado, no es un caso de uso
+  esperado hoy). `calcularPresupuestoMensual()` convierte cada `"YYYY-MM"` a
+  una cuenta absoluta de meses (`año*12 + (mes-1)`) para poder iterar el
+  rango sin manejar `Date` — mismo espíritu que el resto del dominio de OC,
+  que evita `Date` a propósito (ver bullet de `mesDesde`/`mesHasta` arriba).
 - **Nomenclatura ambigua a propósito documentada**: `CreateOcDto.pepId` es
   el **ObjectId de Mongo** del documento `Pep` (para poder crear la ref),
   *no* el valor de negocio `Pep.pepId` (el código tipo
