@@ -1,0 +1,87 @@
+<div class="panel-toolbar">
+  <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Nuevo consultor
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="panel-state">
+    <mat-spinner diameter="32" />
+  </div>
+} @else if (errorMessage()) {
+  <div class="panel-state" role="alert">
+    <p>{{ errorMessage() }}</p>
+  </div>
+} @else if (consultores().length === 0) {
+  <div class="panel-state">
+    <p>Todavía no hay consultores cargados.</p>
+  </div>
+} @else if (isHandset()) {
+  <div class="consultor-cards">
+    @for (consultor of consultores(); track consultor.id) {
+      <mat-card class="consultor-card">
+        <div class="consultor-card-header">
+          <span class="consultor-card-name">{{ consultor.nombre }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar ' + consultor.nombre"
+            (click)="openEditDialog(consultor)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </div>
+        <dl class="consultor-card-details">
+          <dt>Proveedor</dt>
+          <dd>{{ consultor.proveedor }}</dd>
+          <dt>Equipo</dt>
+          <dd>{{ consultor.equipo }}</dd>
+          <dt>Responsable</dt>
+          <dd>{{ consultor.responsable }}</dd>
+        </dl>
+      </mat-card>
+    }
+  </div>
+} @else {
+  <div class="panel-table-wrapper">
+    <table mat-table [dataSource]="consultores()" class="panel-table">
+      <ng-container matColumnDef="proveedor">
+        <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+        <td mat-cell *matCellDef="let consultor">{{ consultor.proveedor }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>Nombre</th>
+        <td mat-cell *matCellDef="let consultor">{{ consultor.nombre }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="equipo">
+        <th mat-header-cell *matHeaderCellDef>Equipo</th>
+        <td mat-cell *matCellDef="let consultor">{{ consultor.equipo }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="responsable">
+        <th mat-header-cell *matHeaderCellDef>Responsable</th>
+        <td mat-cell *matCellDef="let consultor">{{ consultor.responsable }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
+        <td mat-cell *matCellDef="let consultor">
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar ' + consultor.nombre"
+            (click)="openEditDialog(consultor)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+}

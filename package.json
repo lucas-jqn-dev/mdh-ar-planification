@@ -1,0 +1,35 @@
+{
+  "name": "planification-mdh-team",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Aplicacion full stack Angular + NestJS + MongoDB con autenticacion JWT",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"npm run start:dev --workspace backend\" \"npm run start --workspace frontend\"",
+    "dev:backend": "npm run start:dev --workspace backend",
+    "dev:frontend": "npm run start --workspace frontend",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "build:backend": "npm run build --workspace backend",
+    "build:frontend": "npm run build --workspace frontend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "lint:backend": "npm run lint --workspace backend",
+    "lint:frontend": "npm run lint --workspace frontend",
+    "format": "prettier --write \"**/*.{ts,html,scss,json,md}\" --ignore-path .gitignore",
+    "seed:admin": "npm run seed:admin --workspace backend",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
+    "concurrently": "^9.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

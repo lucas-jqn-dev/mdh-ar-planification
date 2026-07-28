@@ -1,0 +1,45 @@
+.master-data-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.master-data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.master-data-header h1 {
+  margin: 0;
+}
+
+.master-data-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.master-data-header-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.master-data-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-placeholder {
+  margin: 0;
+  padding: 1.5rem 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.panel-title-icon {
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}

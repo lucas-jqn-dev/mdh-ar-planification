@@ -1,0 +1,102 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar PEP' : 'Nuevo PEP' }}</h2>
+
+<mat-dialog-content>
+  @if (!confirmingDelete()) {
+    <form [formGroup]="form" class="pep-form" novalidate>
+      <mat-form-field appearance="outline" class="pep-field">
+        <mat-label>ID PEP</mat-label>
+        <input matInput formControlName="pepId" autocomplete="off" />
+        @if (form.controls.pepId.touched && form.controls.pepId.hasError('required')) {
+          <mat-error>El ID del PEP es obligatorio</mat-error>
+        }
+        @if (form.controls.pepId.touched && form.controls.pepId.hasError('maxlength')) {
+          <mat-error>Máximo 60 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="pep-field">
+        <mat-label>Descripción</mat-label>
+        <textarea matInput formControlName="descripcion" rows="2"></textarea>
+        @if (form.controls.descripcion.touched && form.controls.descripcion.hasError('maxlength')) {
+          <mat-error>Máximo 500 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="pep-months" formGroupName="presupuestoMensual">
+        <h3 class="pep-months-title">Presupuesto planificado mensual</h3>
+        <div class="pep-months-grid">
+          @for (mes of meses; track mes.key) {
+            <mat-form-field appearance="outline" class="pep-month-field">
+              <mat-label>{{ mes.label }}</mat-label>
+              <input matInput type="number" min="0" step="1" [formControlName]="mes.key" />
+            </mat-form-field>
+          }
+        </div>
+        <p class="pep-total">
+          Total planificado: <strong>{{ formatMonto(total()) }}</strong>
+        </p>
+      </div>
+
+      @if (errorMessage()) {
+        <p class="pep-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </form>
+  } @else {
+    <p class="delete-confirm-text" role="alert">
+      ¿Eliminar el PEP <strong>{{ data.pep?.pepId }}</strong>? Esta acción no se puede deshacer.
+    </p>
+    @if (errorMessage()) {
+      <p class="pep-error" role="alert">{{ errorMessage() }}</p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="pep-actions">
+  @if (confirmingDelete()) {
+    <button mat-stroked-button type="button" (click)="cancelDeleteConfirmation()" [disabled]="deleting()">
+      Volver
+    </button>
+    <span class="pep-actions-spacer"></span>
+    <button
+      mat-flat-button
+      color="warn"
+      type="button"
+      class="pep-submit"
+      (click)="confirmDelete()"
+      [disabled]="deleting()"
+    >
+      @if (deleting()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>Confirmar eliminación</span>
+    </button>
+  } @else {
+    @if (isEditMode) {
+      <button
+        mat-button
+        color="warn"
+        type="button"
+        (click)="askDeleteConfirmation()"
+        [disabled]="saving()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar
+      </button>
+    }
+    <span class="pep-actions-spacer"></span>
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="pep-submit"
+      (click)="submit()"
+      [disabled]="form.invalid || saving()"
+    >
+      @if (saving()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>{{ isEditMode ? 'Guardar cambios' : 'Crear' }}</span>
+    </button>
+  }
+</mat-dialog-actions>

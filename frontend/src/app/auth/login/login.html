@@ -1,0 +1,73 @@
+<main class="login-page" color="primary">
+  <mat-card class="login-card" role="main" aria-labelledby="login-title">
+    <div class="login-brand">
+      <img class="login-logo" src="images/logo-easy.png" alt="Easy Cencosud" />
+      <h1 id="login-title" class="login-title">MDH AR • Planificador Presupuestos</h1>
+      <p class="login-subtitle">Ingresá con tu cuenta para continuar</p>
+    </div>
+
+    <form class="login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-form-field appearance="outline" class="login-field">
+        <mat-label>Usuario o email</mat-label>
+        <input
+          #identifierInput
+          matInput
+          type="text"
+          formControlName="identifier"
+          autocomplete="username"
+          aria-required="true"
+        />
+        @if (form.controls.identifier.touched && form.controls.identifier.hasError('required')) {
+          <mat-error>El usuario o email es obligatorio</mat-error>
+        }
+        @if (form.controls.identifier.touched && form.controls.identifier.hasError('minlength')) {
+          <mat-error>Ingresá al menos 3 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="login-field">
+        <mat-label>Contraseña</mat-label>
+        <input
+          matInput
+          [type]="hidePassword() ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="current-password"
+          aria-required="true"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          [attr.aria-label]="hidePassword() ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+          [attr.aria-pressed]="!hidePassword()"
+          (click)="toggleHidePassword($event)"
+        >
+          <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+          <mat-error>La contraseña es obligatoria</mat-error>
+        }
+        @if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
+          <mat-error>Debe tener al menos 8 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="login-error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        class="login-submit"
+        [disabled]="form.invalid || loading()"
+      >
+        @if (loading()) {
+          <mat-spinner diameter="20" class="login-spinner" aria-hidden="true" />
+        }
+        <span>{{ loading() ? 'Ingresando…' : 'Ingresar' }}</span>
+      </button>
+    </form>
+  </mat-card>
+</main>

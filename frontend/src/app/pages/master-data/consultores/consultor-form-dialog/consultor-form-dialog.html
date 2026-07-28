@@ -1,0 +1,115 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar consultor' : 'Nuevo consultor' }}</h2>
+
+<mat-dialog-content>
+  @if (!confirmingDelete()) {
+    <form [formGroup]="form" class="consultor-form" novalidate>
+      <mat-form-field appearance="outline" class="consultor-field">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" autocomplete="off" />
+        @if (form.controls.nombre.touched && form.controls.nombre.hasError('required')) {
+          <mat-error>El nombre es obligatorio</mat-error>
+        }
+        @if (form.controls.nombre.touched && form.controls.nombre.hasError('minlength')) {
+          <mat-error>Ingresá al menos 2 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="consultor-field">
+        <mat-label>Proveedor</mat-label>
+        <mat-select formControlName="proveedor">
+          @for (option of proveedorOptions; track option) {
+            <mat-option [value]="option">{{ option }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.proveedor.touched && form.controls.proveedor.hasError('required')) {
+          <mat-error>Seleccioná un proveedor</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="consultor-field">
+        <mat-label>Equipo</mat-label>
+        <mat-select formControlName="equipo">
+          @for (option of equipoOptions; track option) {
+            <mat-option [value]="option">{{ option }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.equipo.touched && form.controls.equipo.hasError('required')) {
+          <mat-error>Seleccioná un equipo</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="consultor-field">
+        <mat-label>Responsable</mat-label>
+        <mat-select formControlName="responsable">
+          @for (option of responsableOptions; track option) {
+            <mat-option [value]="option">{{ option }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.responsable.touched && form.controls.responsable.hasError('required')) {
+          <mat-error>Seleccioná un responsable</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="consultor-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </form>
+  } @else {
+    <p class="delete-confirm-text" role="alert">
+      ¿Eliminar a <strong>{{ data.consultor?.nombre }}</strong>? Esta acción no se puede deshacer.
+    </p>
+    @if (errorMessage()) {
+      <p class="consultor-error" role="alert">{{ errorMessage() }}</p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="consultor-actions">
+  @if (confirmingDelete()) {
+    <button mat-stroked-button type="button" (click)="cancelDeleteConfirmation()" [disabled]="deleting()">
+      Volver
+    </button>
+    <span class="consultor-actions-spacer"></span>
+    <button
+      mat-flat-button
+      color="warn"
+      type="button"
+      class="consultor-submit"
+      (click)="confirmDelete()"
+      [disabled]="deleting()"
+    >
+      @if (deleting()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>Confirmar eliminación</span>
+    </button>
+  } @else {
+    @if (isEditMode) {
+      <button
+        mat-button
+        color="warn"
+        type="button"
+        (click)="askDeleteConfirmation()"
+        [disabled]="saving()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar
+      </button>
+    }
+    <span class="consultor-actions-spacer"></span>
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="consultor-submit"
+      (click)="submit()"
+      [disabled]="form.invalid || saving()"
+    >
+      @if (saving()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>{{ isEditMode ? 'Guardar cambios' : 'Crear' }}</span>
+    </button>
+  }
+</mat-dialog-actions>

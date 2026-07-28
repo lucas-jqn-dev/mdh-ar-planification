@@ -1,0 +1,61 @@
+<div class="master-data-page">
+  <header class="master-data-header">
+    <h1>Datos Maestros</h1>
+    <div class="master-data-header-actions">
+      <button mat-stroked-button type="button" (click)="accordion.openAll()">
+        <mat-icon>unfold_more</mat-icon>
+        Expandir todo
+      </button>
+      <button mat-stroked-button type="button" (click)="accordion.closeAll()">
+        <mat-icon>unfold_less</mat-icon>
+        Colapsar todo
+      </button>
+    </div>
+  </header>
+
+  <mat-accordion #accordion="matAccordion" class="master-data-accordion" multi>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-title-icon">contacts</mat-icon>
+          Perfiles SAP
+        </mat-panel-title>
+        <mat-panel-description>Próximamente</mat-panel-description>
+      </mat-expansion-panel-header>
+      <p class="panel-placeholder">Todavía no implementado.</p>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-title-icon">groups</mat-icon>
+          Consultores
+        </mat-panel-title>
+        <mat-panel-description>{{ consultoresPanel()?.summary() }}</mat-panel-description>
+      </mat-expansion-panel-header>
+      <app-consultores-panel />
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-title-icon">account_balance_wallet</mat-icon>
+          PEPs
+        </mat-panel-title>
+        <mat-panel-description>{{ pepsPanel()?.summary() }}</mat-panel-description>
+      </mat-expansion-panel-header>
+      <app-peps-panel />
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-title-icon">shopping_cart</mat-icon>
+          OCs
+        </mat-panel-title>
+        <mat-panel-description>Próximamente</mat-panel-description>
+      </mat-expansion-panel-header>
+      <p class="panel-placeholder">Todavía no implementado.</p>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

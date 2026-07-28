@@ -1,0 +1,66 @@
+.pep-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+  width: min(560px, 82vw);
+}
+
+.pep-field {
+  width: 100%;
+}
+
+.pep-months {
+  margin-top: 0.5rem;
+}
+
+.pep-months-title {
+  margin: 0 0 0.75rem;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.pep-months-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0 0.75rem;
+}
+
+.pep-month-field {
+  width: 100%;
+}
+
+.pep-total {
+  margin: 0.25rem 0 0.5rem;
+  font: var(--mat-sys-body-large);
+}
+
+.pep-error {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  font: var(--mat-sys-body-medium);
+}
+
+.delete-confirm-text {
+  font: var(--mat-sys-body-large);
+}
+
+.pep-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem 1.25rem;
+}
+
+.pep-actions-spacer {
+  flex: 1 1 auto;
+}
+
+.pep-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

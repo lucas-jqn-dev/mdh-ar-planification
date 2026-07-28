@@ -1,0 +1,40 @@
+.consultor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.consultor-field {
+  width: 100%;
+}
+
+.consultor-error {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  font: var(--mat-sys-body-medium);
+}
+
+.delete-confirm-text {
+  font: var(--mat-sys-body-large);
+}
+
+.consultor-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem 1.25rem;
+}
+
+.consultor-actions-spacer {
+  flex: 1 1 auto;
+}
+
+.consultor-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
