@@ -16,6 +16,8 @@ export interface Oc {
   mesHasta: string;
   /** Estado de la posición: false = Pendiente (default al crear), true = Completada. */
   completada: boolean;
+  /** Acumulador de horas recepcionadas contra esta posición (arranca en 0, lo mantiene sincronizado RecepcionesService en el backend). */
+  horasConsumidas: number;
   createdAt?: string;
   updatedAt?: string;
 }

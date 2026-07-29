@@ -10,6 +10,7 @@ import {
 } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { ErrorStateMatcher } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -53,6 +54,7 @@ interface MesOption {
 const SAVE_ERROR_MESSAGE = 'No pudimos guardar los cambios. Intenta nuevamente.';
 const DELETE_ERROR_MESSAGE = 'No pudimos eliminar la recepción. Intenta nuevamente.';
 const OC_INVALIDA_ERROR = 'ocInvalida';
+const HORAS_EXCEDEN_ERROR = 'horasExcedenDisponible';
 
 /** NRO OC / POSICION / CONSULTOR / PROVEEDOR — mismo texto para las opciones del autocomplete y para el input una vez seleccionada. */
 function ocOptionLabel(oc: Oc): string {
@@ -69,6 +71,53 @@ function ocSeleccionadaValidator(control: AbstractControl<OcControlValue>): Vali
     return null;
   }
   return typeof value === 'object' ? null : { [OC_INVALIDA_ERROR]: true };
+}
+
+/**
+ * Horas disponibles de `oc` = `cantidadHoras - horasConsumidas`. Al editar
+ * una recepción ya existente sobre la **misma** OC, sus propias horas
+ * previas se suman de vuelta — si no, guardar sin cambiar el valor fallaría
+ * porque esas horas ya están contadas en `horasConsumidas` (mismo criterio
+ * que usa `RecepcionesService` en el backend).
+ */
+function calcularHorasDisponibles(oc: Oc, recepcionOriginal: Recepcion | null): number {
+  const esMismaOc = recepcionOriginal?.oc?.id === oc.id;
+  const horasPropiasPrevias = esMismaOc ? recepcionOriginal!.horasRecepcionadas : 0;
+  return oc.cantidadHoras - oc.horasConsumidas + horasPropiasPrevias;
+}
+
+/** Validador de FormGroup: lee `oc` y `horasRecepcionadas` juntos, mismo patrón que `mesRangeValidator` en oc-form-dialog.ts. */
+function crearHorasDisponiblesValidator(
+  recepcionOriginal: Recepcion | null,
+): (control: AbstractControl) => ValidationErrors | null {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const ocValue = control.get('oc')?.value as OcControlValue;
+    const horas = control.get('horasRecepcionadas')?.value as number | null;
+    if (!ocValue || typeof ocValue !== 'object' || horas == null) {
+      return null;
+    }
+    const disponibles = calcularHorasDisponibles(ocValue, recepcionOriginal);
+    return horas > disponibles ? { [HORAS_EXCEDEN_ERROR]: true } : null;
+  };
+}
+
+/**
+ * `mat-form-field` solo revela su contenido `<mat-error>` cuando el
+ * `errorState` del **control propio** del input es `true` — un error de
+ * `FormGroup` (como `horasExcedenDisponible`, que necesita leer `oc` y
+ * `horasRecepcionadas` juntos) no lo activa por sí solo, aunque el `@if`
+ * de la plantilla evalúe a verdadero. Este matcher hace que el input
+ * también entre en `errorState` cuando el grupo padre tiene ese error, para
+ * que el mensaje aparezca dentro del campo en vez de en un párrafo aparte.
+ */
+class HorasDisponiblesErrorStateMatcher implements ErrorStateMatcher {
+  isErrorState(control: FormControl | null): boolean {
+    if (!control) {
+      return false;
+    }
+    const groupError = control.parent?.hasError(HORAS_EXCEDEN_ERROR) ?? false;
+    return control.touched && (control.invalid || groupError);
+  }
 }
 
 @Component({
@@ -97,6 +146,8 @@ export class RecepcionFormDialog {
   readonly ocOptionLabel = ocOptionLabel;
   readonly formatMonto = formatMonto;
   readonly ocInvalidaError = OC_INVALIDA_ERROR;
+  readonly horasExcedenError = HORAS_EXCEDEN_ERROR;
+  readonly horasErrorStateMatcher = new HorasDisponiblesErrorStateMatcher();
 
   readonly ocs = signal<Oc[]>([]);
   readonly loadingOptions = signal(true);
@@ -121,6 +172,8 @@ export class RecepcionFormDialog {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(50)],
     }),
+  }, {
+    validators: crearHorasDisponiblesValidator(this.data.recepcion),
   });
 
   private readonly ocValue = toSignal(this.form.controls.oc.valueChanges, {
@@ -176,6 +229,18 @@ export class RecepcionFormDialog {
     }
     return typeof value === 'string' ? value : ocOptionLabel(value);
   };
+
+  /**
+   * Horas disponibles mostradas en el bloque derivado: fórmula plana
+   * `cantidadHoras - horasConsumidas`, igual que en la tabla de OC de Datos
+   * Maestros (`ocs-panel.ts`) — a propósito **no** usa el ajuste de
+   * `calcularHorasDisponibles()` (que suma de vuelta las horas propias de
+   * la recepción en edición), para que el número mostrado sea siempre
+   * consistente entre pantallas. El validador de submit sí sigue usando el
+   * ajuste, porque ahí importa la corrección matemática al editar, no la
+   * consistencia visual.
+   */
+  readonly horasDisponibles = (oc: Oc): number => oc.cantidadHoras - oc.horasConsumidas;
 
   constructor() {
     this.ocsService.list().subscribe({

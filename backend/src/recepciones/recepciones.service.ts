@@ -14,6 +14,8 @@ const NOT_FOUND_MESSAGE = 'Recepción no encontrada';
 const OC_NOT_FOUND_MESSAGE = 'OC no encontrada';
 const MES_FUERA_DE_RANGO_MESSAGE =
   'El mes debe estar dentro de la validez de la OC seleccionada';
+const HORAS_EXCEDEN_DISPONIBLE_MESSAGE =
+  'Las horas a recepcionar superan las horas disponibles de la OC';
 
 /** Misma cadena de doble-populate que usa OcsService, un nivel más adentro (bajo `oc`). */
 const POPULATE: PopulateOptions[] = [
@@ -44,7 +46,7 @@ export class RecepcionesService {
   }
 
   async create(dto: CreateRecepcionDto): Promise<RecepcionDocument> {
-    await this.assertMesEnRangoDeOc(dto);
+    await this.assertOcYHorasValidas(dto, null);
 
     const created = await this.recepcionModel.create({
       oc: dto.ocId,
@@ -52,6 +54,13 @@ export class RecepcionesService {
       horasRecepcionadas: dto.horasRecepcionadas,
       documento103: dto.documento103,
     });
+
+    await this.ocModel
+      .updateOne(
+        { _id: dto.ocId },
+        { $inc: { horasConsumidas: dto.horasRecepcionadas } },
+      )
+      .exec();
 
     return created.populate(POPULATE);
   }
@@ -61,7 +70,14 @@ export class RecepcionesService {
     dto: CreateRecepcionDto,
   ): Promise<RecepcionDocument> {
     this.assertValidId(id);
-    await this.assertMesEnRangoDeOc(dto);
+
+    const existing = await this.recepcionModel.findById(id).exec();
+
+    if (!existing) {
+      throw new NotFoundException(NOT_FOUND_MESSAGE);
+    }
+
+    await this.assertOcYHorasValidas(dto, existing);
 
     const updated = await this.recepcionModel
       .findByIdAndUpdate(
@@ -81,6 +97,8 @@ export class RecepcionesService {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
     }
 
+    await this.ajustarHorasConsumidas(existing, dto);
+
     return updated;
   }
 
@@ -92,9 +110,27 @@ export class RecepcionesService {
     if (!deleted) {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
     }
+
+    await this.ocModel
+      .updateOne(
+        { _id: deleted.oc },
+        { $inc: { horasConsumidas: -deleted.horasRecepcionadas } },
+      )
+      .exec();
   }
 
-  private async assertMesEnRangoDeOc(dto: CreateRecepcionDto): Promise<void> {
+  /**
+   * Valida existencia de la OC, que `mes` esté dentro de su validez, y que
+   * `horasRecepcionadas` no supere sus horas disponibles
+   * (`cantidadHoras - horasConsumidas`). Al editar una recepción ya
+   * existente sobre la **misma** OC, sus propias horas previas se suman de
+   * vuelta a lo disponible — si no, editar sin cambiar el valor fallaría
+   * porque esas horas ya están contadas en `horasConsumidas`.
+   */
+  private async assertOcYHorasValidas(
+    dto: CreateRecepcionDto,
+    existing: RecepcionDocument | null,
+  ): Promise<void> {
     if (!Types.ObjectId.isValid(dto.ocId)) {
       throw new NotFoundException(OC_NOT_FOUND_MESSAGE);
     }
@@ -107,6 +143,47 @@ export class RecepcionesService {
 
     if (!estaMesEnRango(dto.mes, oc.mesDesde, oc.mesHasta)) {
       throw new BadRequestException(MES_FUERA_DE_RANGO_MESSAGE);
+    }
+
+    const esMismaOc = existing && existing.oc.toString() === dto.ocId;
+    const horasPropiasPrevias = esMismaOc ? existing.horasRecepcionadas : 0;
+    const horasDisponibles =
+      oc.cantidadHoras - oc.horasConsumidas + horasPropiasPrevias;
+
+    if (dto.horasRecepcionadas > horasDisponibles) {
+      throw new BadRequestException(HORAS_EXCEDEN_DISPONIBLE_MESSAGE);
+    }
+  }
+
+  /** Mantiene `Oc.horasConsumidas` sincronizado tras editar una Recepcion ya existente. */
+  private async ajustarHorasConsumidas(
+    existing: RecepcionDocument,
+    dto: CreateRecepcionDto,
+  ): Promise<void> {
+    const ocCambio = existing.oc.toString() !== dto.ocId;
+
+    if (ocCambio) {
+      await this.ocModel
+        .updateOne(
+          { _id: existing.oc },
+          { $inc: { horasConsumidas: -existing.horasRecepcionadas } },
+        )
+        .exec();
+      await this.ocModel
+        .updateOne(
+          { _id: dto.ocId },
+          { $inc: { horasConsumidas: dto.horasRecepcionadas } },
+        )
+        .exec();
+      return;
+    }
+
+    const delta = dto.horasRecepcionadas - existing.horasRecepcionadas;
+
+    if (delta !== 0) {
+      await this.ocModel
+        .updateOne({ _id: dto.ocId }, { $inc: { horasConsumidas: delta } })
+        .exec();
     }
   }
 

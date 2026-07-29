@@ -3,6 +3,13 @@
 <mat-dialog-content>
   @if (!confirmingDelete()) {
     <form [formGroup]="form" class="oc-form" novalidate>
+      @if (hasRecepciones()) {
+        <div class="oc-warning" role="alert">
+          <mat-icon>warning</mat-icon>
+          <span>{{ recepcionesWarning() }}</span>
+        </div>
+      }
+
       <mat-form-field appearance="outline" class="oc-field">
         <mat-label>SolPed</mat-label>
         <input matInput formControlName="solped" autocomplete="off" />
@@ -168,7 +175,7 @@
         color="warn"
         type="button"
         (click)="askDeleteConfirmation()"
-        [disabled]="saving()"
+        [disabled]="saving() || hasRecepciones()"
       >
         <mat-icon>delete</mat-icon>
         Eliminar
@@ -182,7 +189,7 @@
       type="button"
       class="oc-submit"
       (click)="submit()"
-      [disabled]="form.invalid || saving()"
+      [disabled]="form.invalid || saving() || hasRecepciones()"
     >
       @if (saving()) {
         <mat-spinner diameter="18" />

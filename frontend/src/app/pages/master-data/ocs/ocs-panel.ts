@@ -83,6 +83,10 @@ function totalPosicion(oc: Oc): number | null {
   return tarifa != null ? tarifa * oc.cantidadHoras : null;
 }
 
+function horasDisponibles(oc: Oc): number {
+  return oc.cantidadHoras - oc.horasConsumidas;
+}
+
 @Component({
   selector: 'app-ocs-panel',
   standalone: true,
@@ -109,6 +113,7 @@ export class OcsPanel {
   readonly formatMonto = formatMonto;
   readonly formatMesAnio = formatMesAnio;
   readonly totalPosicion = totalPosicion;
+  readonly horasDisponibles = horasDisponibles;
   readonly isGroupRow = isGroupRow;
   readonly sortOptions = SORT_OPTIONS;
   readonly columnCount = 15;

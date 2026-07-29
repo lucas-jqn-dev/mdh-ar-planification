@@ -89,6 +89,15 @@ export class Oc {
   @Prop({ type: PresupuestoMensualSchema, required: true, default: () => ({}) })
   presupuestoMensual: PresupuestoMensual;
 
+  /**
+   * Acumulador de horas recepcionadas contra esta posición. Arranca en 0 al
+   * crear la OC y `RecepcionesService` lo mantiene sincronizado (vía `$inc`
+   * atómico) en cada alta/edición/baja de `Recepcion` — nunca se edita a
+   * mano desde el ABM de OC.
+   */
+  @Prop({ type: Number, required: true, default: 0, min: 0 })
+  horasConsumidas: number;
+
   createdAt?: Date;
   updatedAt?: Date;
 }

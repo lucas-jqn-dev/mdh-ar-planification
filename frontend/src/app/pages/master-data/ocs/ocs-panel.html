@@ -81,8 +81,8 @@
           <dd>{{ formatMesAnio(oc.mesDesde) }} a {{ formatMesAnio(oc.mesHasta) }}</dd>
           <dt>PEP</dt>
           <dd>{{ oc.pep ? oc.pep.pepId : '—' }}</dd>
-          <dt>Cantidad de horas</dt>
-          <dd>{{ oc.cantidadHoras }}</dd>
+          <dt>Horas disponibles</dt>
+          <dd>{{ horasDisponibles(oc) }}</dd>
           <dt>Consultor</dt>
           <dd>{{ oc.consultor ? oc.consultor.nombre : '—' }}</dd>
           <dt>Perfil SAP</dt>
@@ -108,7 +108,7 @@
           <th>Posición</th>
           <th>Número OC</th>
           <th>PEP</th>
-          <th>Cant. horas</th>
+          <th>Horas disponibles</th>
           <th>Consultor</th>
           <th>Perfil SAP</th>
           <th>Tarifa hora</th>
@@ -133,7 +133,7 @@
               <td>{{ row.posicion }}</td>
               <td>{{ row.numeroOc || '—' }}</td>
               <td>{{ row.pep ? row.pep.pepId : '—' }}</td>
-              <td>{{ row.cantidadHoras }}</td>
+              <td>{{ horasDisponibles(row) }}</td>
               <td>{{ row.consultor ? row.consultor.nombre : '—' }}</td>
               <td>{{ row.consultor?.perfilSap ? row.consultor!.perfilSap!.codigoSap : '—' }}</td>
               <td>{{ row.consultor?.perfilSap ? formatMonto(row.consultor!.perfilSap!.tarifaHora) : '—' }}</td>

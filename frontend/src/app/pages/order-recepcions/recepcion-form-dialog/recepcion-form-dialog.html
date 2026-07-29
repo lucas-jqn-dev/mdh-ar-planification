@@ -44,6 +44,8 @@
             <dd>{{ oc.consultor?.perfilSap ? formatMonto(oc.consultor!.perfilSap!.tarifaHora) : '—' }}</dd>
             <dt>Cant. de horas OC</dt>
             <dd>{{ oc.cantidadHoras }}</dd>
+            <dt>Horas disponibles</dt>
+            <dd>{{ horasDisponibles(oc) }}</dd>
             <dt>ID PEP</dt>
             <dd>{{ oc.pep ? oc.pep.pepId : '—' }}</dd>
           </dl>
@@ -67,12 +69,22 @@
 
       <mat-form-field appearance="outline" class="recepcion-field recepcion-field-half">
         <mat-label>Horas a recepcionar</mat-label>
-        <input matInput type="number" min="0.01" step="0.01" formControlName="horasRecepcionadas" />
+        <input
+          matInput
+          type="number"
+          min="0.01"
+          step="0.01"
+          formControlName="horasRecepcionadas"
+          [errorStateMatcher]="horasErrorStateMatcher"
+        />
         @if (form.controls.horasRecepcionadas.touched && form.controls.horasRecepcionadas.hasError('required')) {
           <mat-error>Obligatorio</mat-error>
         }
         @if (form.controls.horasRecepcionadas.touched && form.controls.horasRecepcionadas.hasError('min')) {
           <mat-error>Debe ser mayor a 0</mat-error>
+        }
+        @if (form.controls.horasRecepcionadas.touched && form.hasError(horasExcedenError)) {
+          <mat-error>Supera las horas disponibles de la OC</mat-error>
         }
       </mat-form-field>
 

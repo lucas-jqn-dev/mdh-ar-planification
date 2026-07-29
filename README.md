@@ -303,10 +303,19 @@ para cargar una posición. Campos: `solped` (texto, obligatorio),
 cargar la posición), `pep` (select obligatorio, referencia a un PEP cargado),
 `cantidadHoras` (número, obligatorio), `consultor` (select obligatorio,
 referencia a un Consultor cargado) y `mesDesde`/`mesHasta` (validez de la OC,
-granularidad de mes, formato `"YYYY-MM"`, ambos obligatorios). Al elegir el
-Consultor, el dialog muestra —de solo lectura— su Perfil SAP, Tarifa hora,
-Proveedor, Responsable y el **Total de la posición** (`tarifaHora *
+granularidad de mes, formato `"YYYY-MM"`, ambos obligatorios). También tiene
+`horasConsumidas` (número, arranca en `0`), pero **no** se carga desde este
+dialog — es un acumulador que mantiene sincronizado el módulo de Recepciones
+en cada alta/edición/baja de una recepción contra esta OC (ver sección
+"Recepciones" más abajo). Al elegir el Consultor, el dialog muestra —de solo
+lectura— su Perfil SAP, Tarifa hora, Proveedor, Responsable y el **Total de
+la posición** (`tarifaHora *
 cantidadHoras`, recalculado en vivo a medida que se completa el formulario).
+La tabla/cards de OC (`ocs-panel.html`) **no** tienen una columna
+"Cantidad de horas" directa: en su lugar muestran **"Horas disponibles"**
+(`cantidadHoras - horasConsumidas`), calculado por la función
+`horasDisponibles()` en `ocs-panel.ts` — mismo criterio que usa el bloque
+derivado del dialog de Recepción (ver sección "Recepciones").
 
 - **Backend**: `backend/src/master-data/ocs/` — `pep` y `consultor` son
   `ref` de Mongoose (a `Pep` y `Consultor` respectivamente), poblados en
@@ -339,6 +348,19 @@ cantidadHoras`, recalculado en vivo a medida que se completa el formulario).
 > esta etapa (ver CLAUDE.md); si el negocio necesita que una OC "congele" la
 > tarifa vigente al momento de la carga, hay que decidirlo explícitamente y
 > pasar a un modelo de snapshot.
+
+**Bloqueo si la OC ya tiene recepciones.** A diferencia de Consultor/PEP
+(que sí se pueden borrar aunque una OC los referencie — ver más abajo), una
+OC con al menos una `Recepcion` asociada **no se puede editar ni eliminar**,
+a pedido explícito: sus datos (Consultor, Perfil SAP, Tarifa, PEP) se leen
+en vivo desde cada Recepción vía populate, así que tocarla corrompería ese
+historial. Al abrir el dialog en modo edición, si la OC tiene recepciones:
+aparece un warning arriba del campo SolPed ("Esta OC tiene N recepción(es)
+generada(s). No se puede editar ni eliminar."), **todo el formulario queda
+deshabilitado** (`this.form.disable()`, en `oc-form-dialog.ts`) y los
+botones Eliminar/Guardar cambios quedan deshabilitados. El backend valida lo
+mismo por su cuenta (`OcsService.assertSinRecepciones()`, `ConflictException`
+409) — no confía en que el frontend no haya mandado la request igual.
 
 **Presupuesto mensual de la OC.** Cada OC tiene, además, `presupuestoMensual`
 — mismo shape que `Pep.presupuestoMensual` (12 montos numéricos, uno por mes,
@@ -439,8 +461,9 @@ cargada, no un catálogo maestro) — mismo motivo por el que su backend vive en
 `backend/src/recepciones/` en vez de bajo `master-data/`. ABM completo: cada
 recepción registra `oc` (ref a una posición de OC ya cargada), `mes`
 (`"YYYY-MM"`, debe caer dentro de `mesDesde`/`mesHasta` de esa OC),
-`horasRecepcionadas` (número positivo) y `documento103` (texto libre, el comprobante del proceso
-SAP) — los cuatro obligatorios.
+`horasRecepcionadas` (número positivo, no puede superar las horas
+disponibles de la OC — ver abajo) y `documento103` (texto libre, el
+comprobante del proceso SAP) — los cuatro obligatorios.
 
 - **Alta**: el botón "Nueva recepción" abre un dialog con un campo de OC tipo
   **autocomplete** (`<input matInput [matAutocomplete]>`, no un
@@ -453,12 +476,31 @@ SAP) — los cuatro obligatorios.
   actual. Cada opción — y el valor una vez elegido — se muestra como **NRO
   OC / POSICIÓN / CONSULTOR / PROVEEDOR**. Al elegir una OC, el dialog
   muestra además, de solo lectura, **OC, Posición, Consultor, Proveedor,
-  Tarifa hora, Cant. de horas OC e ID PEP** (derivados del Consultor/Perfil
-  SAP ya poblados, igual criterio "sin snapshot" que `oc-form-dialog`), y
-  puebla un `<mat-select>` de "Mes a recepcionar" con **todos** los meses
-  entre `mesDesde` y `mesHasta` de esa OC (inclusive) — ej. una OC de julio a
-  septiembre ofrece Julio/Agosto/Septiembre, no solo los extremos. Por
-  último, dos inputs obligatorios: horas a recepcionar y Documento 103.
+  Tarifa hora, Cant. de horas OC, Horas disponibles e ID PEP** (derivados del
+  Consultor/Perfil SAP ya poblados, igual criterio "sin snapshot" que
+  `oc-form-dialog`), y puebla un `<mat-select>` de "Mes a recepcionar" con
+  **todos** los meses entre `mesDesde` y `mesHasta` de esa OC (inclusive) —
+  ej. una OC de julio a septiembre ofrece Julio/Agosto/Septiembre, no solo
+  los extremos. Por último, dos inputs obligatorios: horas a recepcionar y
+  Documento 103.
+- **Horas disponibles y `Oc.horasConsumidas`**: cada `Oc` tiene un
+  acumulador `horasConsumidas` (arranca en `0` al crear la OC) que
+  `RecepcionesService` incrementa/ajusta/decrementa automáticamente en cada
+  alta, edición o baja de una `Recepcion` — nunca se edita a mano. El
+  dialog muestra "Horas disponibles" en el bloque derivado con la fórmula
+  **plana** `cantidadHoras - horasConsumidas` — el mismo número, calculado
+  igual, que la columna "Horas disponibles" de la tabla de OC en Datos
+  Maestros (ver sección OC), para que sea consistente entre pantallas. La
+  **validación** de submit usa un cálculo ligeramente distinto (ver
+  CLAUDE.md): al editar una recepción existente sobre la misma OC, sus
+  propias horas previas se suman de vuelta al tope permitido, para no
+  bloquear guardar un valor mayor solo porque esas horas ya estaban
+  contadas en `horasConsumidas`. El mensaje de error ("Supera las horas
+  disponibles de la OC") aparece **dentro** del campo "Horas a recepcionar"
+  (no como texto aparte) y el botón de guardar queda deshabilitado
+  mientras el error esté presente — el backend valida lo mismo por su
+  cuenta, no confía en que el frontend no haya mandado un valor armado a
+  mano.
 - **Backend**: `backend/src/recepciones/` — `Recepcion.oc` es un `ref` a
   `Oc` (`master-data/ocs/schemas/oc.schema.ts`); `RecepcionesService`
   valida con `estaMesEnRango()` (exportada desde

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateOcDto } from './dto/create-oc.dto';
@@ -11,6 +15,10 @@ import {
   ConsultorDocument,
 } from '../consultores/schemas/consultor.schema';
 import type { PerfilSapDocument } from '../perfiles-sap/schemas/perfil-sap.schema';
+import {
+  Recepcion,
+  RecepcionDocument,
+} from '../../recepciones/schemas/recepcion.schema';
 
 const NOT_FOUND_MESSAGE = 'OC no encontrada';
 const PEP_NOT_FOUND_MESSAGE = 'PEP no encontrado';
@@ -25,6 +33,8 @@ export class OcsService {
     private readonly pepModel: Model<PepDocument>,
     @InjectModel(Consultor.name)
     private readonly consultorModel: Model<ConsultorDocument>,
+    @InjectModel(Recepcion.name)
+    private readonly recepcionModel: Model<RecepcionDocument>,
   ) {}
 
   findAll(): Promise<OcDocument[]> {
@@ -62,6 +72,7 @@ export class OcsService {
 
   async update(id: string, dto: CreateOcDto): Promise<OcDocument> {
     this.assertValidId(id);
+    await this.assertSinRecepciones(id, 'editar');
     await this.assertPepExists(dto.pepId);
     await this.assertConsultorExists(dto.consultorId);
 
@@ -119,6 +130,7 @@ export class OcsService {
 
   async remove(id: string): Promise<void> {
     this.assertValidId(id);
+    await this.assertSinRecepciones(id, 'eliminar');
 
     const deleted = await this.ocModel.findByIdAndDelete(id).exec();
 
@@ -154,6 +166,29 @@ export class OcsService {
   private assertValidId(id: string): void {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
+    }
+  }
+
+  /**
+   * Una OC con al menos una Recepción asociada no se puede editar ni
+   * eliminar: sus datos (Consultor, Perfil SAP, Tarifa, PEP) se leen en
+   * vivo desde cada Recepción vía populate, así que borrarla o cambiarle
+   * el Consultor/PEP dejaría esas recepciones históricas con datos
+   * incorrectos o huérfanos. A diferencia de la falta de integridad
+   * referencial ya documentada para Consultor/Pep (que sí se pueden borrar
+   * aunque una OC los referencie), acá el bloqueo fue pedido explícitamente.
+   */
+  private async assertSinRecepciones(
+    id: string,
+    accion: 'editar' | 'eliminar',
+  ): Promise<void> {
+    const count = await this.recepcionModel.countDocuments({ oc: id });
+
+    if (count > 0) {
+      const sustantivo = count === 1 ? 'recepción' : 'recepciones';
+      throw new ConflictException(
+        `No se puede ${accion} la OC: tiene ${count} ${sustantivo} asociada${count === 1 ? '' : 's'}.`,
+      );
     }
   }
 

@@ -180,6 +180,31 @@ chicas y verificables.
   una cuenta absoluta de meses (`año*12 + (mes-1)`) para poder iterar el
   rango sin manejar `Date` — mismo espíritu que el resto del dominio de OC,
   que evita `Date` a propósito (ver bullet de `mesDesde`/`mesHasta` arriba).
+- **Una OC con recepciones asociadas no se puede editar ni eliminar** —
+  excepción explícita a la falta de integridad referencial que sí aplica
+  para Consultor/Pep (ver bullet más abajo). `OcsService.assertSinRecepciones()`
+  cuenta `Recepcion` por `oc: id` (`recepcionModel.countDocuments(...)`) al
+  principio de `update()`/`remove()` y tira `ConflictException` (409) si hay
+  al menos una. **`RecepcionSchema` se registra con `MongooseModule.forFeature()`
+  en `OcsModule` además de en `RecepcionesModule`** (registro duplicado, a
+  propósito): así `OcsService` puede inyectar `Model<RecepcionDocument>` sin
+  que `OcsModule` tenga que importar `RecepcionesModule` como módulo Nest —
+  que generaría un ciclo real de módulos, porque `RecepcionesModule` ya
+  importa `OcsModule` para su propio `Model<OcDocument>`. Registrar el mismo
+  schema en dos `forFeature()` es válido en Mongoose/Nest (el modelo
+  subyacente es un singleton por conexión); solo se evita reexportar el
+  `@Module()` del otro dominio, que es lo que rompería el grafo de DI. El
+  frontend replica la regla: `OcFormDialog` carga `RecepcionesService.list()`
+  al abrir en modo edición (nunca en alta/copia, que no pueden tener
+  recepciones todavía), filtra por `oc.id`, y si el conteo es > 0 llama
+  `this.form.disable()` — deshabilita los 8 controles de una — y suma
+  `hasRecepciones()` al `[disabled]` de los botones Eliminar/Guardar
+  (necesario aparte del `form.invalid`, porque un `FormGroup` con **todos**
+  sus controles deshabilitados reporta `invalid: false` en Angular — un form
+  disabled se considera válido por definición, así que no basta con
+  `form.invalid` para bloquear el submit). Un warning (`.oc-warning`, ícono
+  `warning`, texto vía `recepcionesWarning()`) aparece arriba del campo
+  SolPed con la cantidad exacta, singular/plural.
 - **Nomenclatura ambigua a propósito documentada**: `CreateOcDto.pepId` es
   el **ObjectId de Mongo** del documento `Pep` (para poder crear la ref),
   *no* el valor de negocio `Pep.pepId` (el código tipo
@@ -437,9 +462,63 @@ chicas y verificables.
   Consultor ni ningún otro campo, a propósito, porque el pedido fue
   específicamente "escribir el número de OC". Las opciones (y el valor ya
   elegido en el input) se renderizan con `ocOptionLabel()`: **NRO OC /
-  POSICIÓN / CONSULTOR / PROVEEDOR**, en ese orden y separadas por `" / "` —
-  formato pedido explícitamente, no el mismo que usa `oc-form-dialog.ts`
-  para sus propios selects de PEP/Consultor.
+  POSICIÓN / CONSULTOR / PROVEEDOR**, en ese orden — formato pedido
+  explícitamente, no el mismo que usa `oc-form-dialog.ts` para sus propios
+  selects de PEP/Consultor.
+- **`Oc.horasConsumidas` (default `0`) es un acumulador que solo
+  `RecepcionesService` toca, nunca el ABM de OC** — `OcsService.create`/
+  `update` no lo incluyen en absoluto en el objeto que arman, así que
+  Mongoose lo deja intacto (default en el alta, valor existente en la
+  edición). La sincronización usa `$inc` atómico contra el documento de la
+  OC (`ocModel.updateOne({ _id }, { $inc: { horasConsumidas: delta } })`)
+  en vez de leer-modificar-guardar, para evitar carreras si dos recepciones
+  se guardan casi al mismo tiempo:
+  - `create`: `+horasRecepcionadas`.
+  - `update`: si la OC destino cambió, resta las horas viejas de la OC
+    anterior y suma las nuevas a la OC nueva (dos `updateOne`); si es la
+    misma OC, un único `updateOne` con el delta (`nuevo - viejo`).
+  - `remove`: `-horasRecepcionadas` sobre `deleted.oc` (el documento ya
+    borrado, leído del resultado de `findByIdAndDelete` antes de que se
+    pierda la referencia).
+- **"Horas disponibles" tiene DOS fórmulas distintas a propósito: una para
+  mostrar, otra para validar.** El bloque derivado del dialog de Recepción
+  y la columna "Horas disponibles" de la tabla de OC (`ocs-panel.ts`,
+  función `horasDisponibles(oc)`) usan siempre la fórmula **plana**
+  `cantidadHoras - horasConsumidas` — sin excepciones, para que el número
+  mostrado sea idéntico entre pantallas (a pedido explícito: el usuario
+  reportó que el ajuste de abajo, aplicado también al display, hacía que
+  "Horas disponibles" se viera igual a `cantidadHoras` al editar una
+  recepción, lo cual parecía un bug aunque matemáticamente era correcto).
+  La **validación** de submit (`crearHorasDisponiblesValidator()` en
+  `recepcion-form-dialog.ts`, y `RecepcionesService.assertOcYHorasValidas()`
+  en el backend) sigue usando `calcularHorasDisponibles()`, que si la
+  recepción en edición ya apunta a la misma OC, suma de vuelta sus propias
+  `horasRecepcionadas` previas al tope permitido (si no, subir el valor de
+  una recepción existente fallaría por debajo de su propio tope real,
+  porque esas horas ya están contadas en `horasConsumidas`). Es un
+  validador de **`FormGroup`** (no de un control individual, porque
+  necesita leer `oc` y `horasRecepcionadas` juntos), mismo patrón que
+  `mesRangeValidator` en `oc-form-dialog.ts`. El backend valida por su
+  cuenta aunque el frontend ya bloquee el submit — mismo criterio que la
+  validación de `mes` contra `mesDesde`/`mesHasta`.
+- **Un error de `FormGroup` no basta para que `mat-form-field` muestre su
+  `<mat-error>` proyectado** — gotcha de Angular Material que costó
+  diagnosticar: `mat-form-field` decide si renderizar el contenido
+  `<mat-error>` mirando el `errorState` del **control propio** del input
+  (vía `ErrorStateMatcher`, por default `control.invalid && control.touched`
+  de ESE control), no el estado del `FormGroup` padre. El validador
+  `horasExcedenDisponible` vive en el grupo (necesita leer `oc` +
+  `horasRecepcionadas` juntos), así que el control `horasRecepcionadas` por
+  sí solo seguía "válido" y el `@if` de la plantilla nunca llegaba a
+  renderizarse aunque evaluara `true` — el mensaje solo aparecía si se
+  movía a un `<p>` suelto fuera del `mat-form-field` (que es justamente el
+  patrón que ya usa `mesRangeValidator` en `oc-form-dialog.ts`, probablemente
+  por este mismo motivo). Cuando el pedido es explícito ("mostrar el
+  mensaje en el input"), la solución es un `ErrorStateMatcher` custom
+  (`HorasDisponiblesErrorStateMatcher` en `recepcion-form-dialog.ts`,
+  bindeado con `[errorStateMatcher]` en el `<input matInput>`) que también
+  chequea `control.parent?.hasError(...)` — recién ahí `mat-form-field`
+  revela el `<mat-error>` proyectado dentro del campo.
 
 ## Gotchas ya resueltos (no los reintroduzcas)
 
@@ -586,11 +665,17 @@ chicas y verificables.
   `mesHasta` tienen granularidad de mes (no día completo como `F. Desde`/
   `F. Hasta`), sin reparto en hasta 3 PEPs con porcentaje, sin el flag
   "Activo p/elegir?". Ver detalle en la sección de arquitectura arriba.
-- OC: sin integridad referencial. Borrar un Consultor o un PEP referenciado
-  por una OC no está bloqueado (generaría import circular entre
-  `ConsultoresModule`/`PepsModule` y `OcsModule`); la OC queda con esa
-  referencia en `null` y se renderiza como `—`, igual que el caso de datos
-  legacy sin `perfilSap`/`pais`.
+- OC: sin integridad referencial hacia Consultor/PEP. Borrar un Consultor o
+  un PEP referenciado por una OC no está bloqueado (generaría import
+  circular entre `ConsultoresModule`/`PepsModule` y `OcsModule`); la OC
+  queda con esa referencia en `null` y se renderiza como `—`, igual que el
+  caso de datos legacy sin `perfilSap`/`pais`. **Excepción**: en sentido
+  contrario, una OC con Recepciones asociadas sí está protegida (ver bullet
+  de arquitectura arriba) — se verificó en el navegador contra el MongoDB
+  Atlas real del usuario abriendo para editar una OC con una recepción ya
+  cargada: el warning apareció con el conteo correcto ("Esta OC tiene 1
+  recepción generada..."), los 8 controles del form y ambos botones
+  (Eliminar, Guardar cambios) quedaron deshabilitados.
 - OC: evaluar si conviene pasar de ref-vivo a snapshot para Perfil SAP/
   Tarifa/Proveedor/Responsable (ver bullet de arquitectura arriba) — depende
   de si el negocio necesita que una OC ya cargada "congele" esos valores.
@@ -614,9 +699,16 @@ chicas y verificables.
   mobile para este panel en particular (mismo `injectIsHandset()` que ya
   está verificado en el resto de la app), ni el caso de una OC cuyo rango
   cruce fin de año.
-- Recepciones: no hay validación de que la suma de horas recepcionadas de
-  una OC no supere `Oc.cantidadHoras` — no fue pedido, y decidir qué hacer
-  si ya hay recepciones cargadas que superarían ese tope requiere una
-  decisión de negocio explícita.
+- `Oc.horasConsumidas` + validación de "horas disponibles" en el dialog de
+  Recepción (backend y frontend, ver bullets de arquitectura arriba): se
+  verificó en el navegador contra Mongo Atlas real el ciclo completo —
+  crear una OC de `cantidadHoras: 100`, crear una recepción de 40 hs
+  (`horasConsumidas` pasa a 40, "Horas disponibles" en el dialog muestra
+  100 antes y 60 después), intentar cargar 150 hs en una recepción nueva
+  (bloqueado, botón deshabilitado + mensaje de error, `horasConsumidas`
+  intacto), editar esa recepción a 90 hs (`horasConsumidas` pasa a 90,
+  validado que "Horas disponibles" en modo edición muestra 100 — la OC
+  entera, no 100 menos las 40 ya contadas por esa misma recepción) y
+  eliminarla (`horasConsumidas` vuelve a 0).
 - Tests: la estructura está preparada (Jest en backend, Vitest en frontend
   vía Angular CLI 21) pero no hay tests escritos todavía.

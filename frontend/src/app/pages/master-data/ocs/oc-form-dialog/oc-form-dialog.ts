@@ -30,6 +30,7 @@ import { formatMonto } from '../../../../core/utils/format.util';
 import { OcsService } from '../ocs.service';
 import { PepsService } from '../../peps/peps.service';
 import { ConsultoresService } from '../../consultores/consultores.service';
+import { RecepcionesService } from '../../../order-recepcions/recepciones.service';
 
 export interface OcFormDialogData {
   oc: Oc | null;
@@ -105,6 +106,7 @@ export class OcFormDialog {
   private readonly ocsService = inject(OcsService);
   private readonly pepsService = inject(PepsService);
   private readonly consultoresService = inject(ConsultoresService);
+  private readonly recepcionesService = inject(RecepcionesService);
   protected readonly data = inject<OcFormDialogData>(MAT_DIALOG_DATA);
 
   readonly pepLabel = pepLabel;
@@ -122,6 +124,25 @@ export class OcFormDialog {
   readonly deleting = signal(false);
   readonly confirmingDelete = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  /**
+   * Cantidad de Recepciones que ya apuntan a esta OC — solo se calcula en
+   * modo edición (una OC recién creada, o precargada por "Copiar", nunca
+   * puede tener recepciones todavía). Si es > 0, la OC queda bloqueada:
+   * todo el form se deshabilita (ver `constructor()`) y los botones
+   * Eliminar/Guardar quedan deshabilitados, porque los datos de una
+   * Recepción (Consultor, Perfil SAP, Tarifa, PEP) se leen en vivo desde
+   * esta OC — editarla o borrarla corrompería ese historial.
+   */
+  readonly recepcionesCount = signal(0);
+  readonly hasRecepciones = computed(() => this.recepcionesCount() > 0);
+
+  /** Texto del warning arriba de SolPed — singular/plural según la cantidad. */
+  readonly recepcionesWarning = computed(() => {
+    const count = this.recepcionesCount();
+    const sustantivo = count === 1 ? 'recepción generada' : 'recepciones generadas';
+    return `Esta OC tiene ${count} ${sustantivo}. No se puede editar ni eliminar.`;
+  });
 
   /**
    * Fuente de precarga para los campos que se mantienen tanto al editar
@@ -201,6 +222,21 @@ export class OcFormDialog {
       },
       error: () => this.loadingOptions.set(false),
     });
+
+    if (this.isEditMode) {
+      this.recepcionesService.list().subscribe({
+        next: (recepciones) => {
+          const count = recepciones.filter((r) => r.oc?.id === this.data.oc!.id).length;
+          this.recepcionesCount.set(count);
+          if (count > 0) {
+            this.form.disable();
+          }
+        },
+        error: () => {
+          /* si falla la carga no bloqueamos por las dudas: el form queda editable */
+        },
+      });
+    }
   }
 
   submit(): void {
