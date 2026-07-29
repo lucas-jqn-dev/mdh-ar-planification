@@ -20,7 +20,7 @@
     "lint:frontend": "npm run lint --workspace frontend",
     "format": "prettier --write \"**/*.{ts,html,scss,json,md}\" --ignore-path .gitignore",
     "seed:admin": "npm run seed:admin --workspace backend",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

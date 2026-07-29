@@ -3,7 +3,13 @@ services:
     type: web
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    # --include=dev a propósito: con NODE_ENV=production seteado más abajo,
+    # un "npm install" a secas se saltea devDependencies — pero ahí viven
+    # las herramientas de build (@nestjs/cli, @angular/cli, typescript),
+    # así que "nest build"/"ng build" fallarían igual después. NODE_ENV
+    # sigue en "production" para el runtime (cookies secure, Swagger
+    # deshabilitado), solo el install ignora esa restricción.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
