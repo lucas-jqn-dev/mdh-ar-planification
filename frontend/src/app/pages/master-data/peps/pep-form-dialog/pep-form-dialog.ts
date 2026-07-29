@@ -38,7 +38,7 @@ interface PepForm {
   pepId: FormControl<string>;
   descripcion: FormControl<string>;
   pais: FormControl<Pais | null>;
-  presupuestoMensual: PresupuestoMensualFormGroup;
+  forecastMensual: PresupuestoMensualFormGroup;
 }
 
 const SAVE_ERROR_MESSAGE = 'No pudimos guardar los cambios. Intenta nuevamente.';
@@ -99,19 +99,32 @@ export class PepFormDialog {
     pais: new FormControl<Pais | null>(this.data.pep?.pais ?? null, {
       validators: Validators.required,
     }),
-    presupuestoMensual: buildPresupuestoMensualGroup(
-      this.data.pep?.presupuestoMensual ?? crearPresupuestoMensualVacio(),
+    forecastMensual: buildPresupuestoMensualGroup(
+      this.data.pep?.saldoActual?.forecastMensual ?? crearPresupuestoMensualVacio(),
     ),
   });
 
-  private readonly presupuestoMensualValue = toSignal(
-    this.form.controls.presupuestoMensual.valueChanges.pipe(
-      map(() => this.form.controls.presupuestoMensual.getRawValue()),
+  private readonly forecastMensualValue = toSignal(
+    this.form.controls.forecastMensual.valueChanges.pipe(
+      map(() => this.form.controls.forecastMensual.getRawValue()),
     ),
-    { initialValue: this.form.controls.presupuestoMensual.getRawValue() },
+    { initialValue: this.form.controls.forecastMensual.getRawValue() },
   );
 
-  readonly total = computed(() => sumPresupuestoMensual(this.presupuestoMensualValue()));
+  readonly total = computed(() => sumPresupuestoMensual(this.forecastMensualValue()));
+
+  constructor() {
+    // Un PEP ya creado no puede cambiar su identidad (ID/Descripción/País)
+    // desde este dialog — solo el presupuesto planificado mensual queda
+    // editable. Se deshabilitan los controles en vez de todo el form (a
+    // diferencia del bloqueo de OC con recepciones) porque acá sí se
+    // necesita seguir editando `forecastMensual`.
+    if (this.isEditMode) {
+      this.form.controls.pepId.disable();
+      this.form.controls.descripcion.disable();
+      this.form.controls.pais.disable();
+    }
+  }
 
   submit(): void {
     if (this.form.invalid || this.saving()) {
@@ -124,7 +137,7 @@ export class PepFormDialog {
       pepId: this.form.controls.pepId.value.trim(),
       descripcion: descripcion || undefined,
       pais: this.form.controls.pais.value!,
-      presupuestoMensual: this.form.controls.presupuestoMensual.getRawValue(),
+      forecastMensual: this.form.controls.forecastMensual.getRawValue(),
     };
 
     this.errorMessage.set(null);

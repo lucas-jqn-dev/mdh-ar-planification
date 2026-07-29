@@ -35,6 +35,40 @@ export function calcularPresupuestoMensual(
   return base;
 }
 
+/**
+ * `presupuesto` con cada mes multiplicado por `signo` — usado por
+ * `OcsService` para sumar (+1, al crear la OC o al asignarla a un PEP
+ * nuevo tras cambiar de PEP) o restar (-1, al eliminar la OC o al
+ * quitarla del PEP viejo tras cambiar de PEP) contra
+ * `SaldoPep.asignacionMensual`.
+ */
+export function presupuestoConSigno(
+  presupuesto: PresupuestoMensual,
+  signo: 1 | -1,
+): Record<Mes, number> {
+  const resultado = {} as Record<Mes, number>;
+  for (const mes of MESES) {
+    resultado[mes] = signo * (presupuesto[mes] ?? 0);
+  }
+  return resultado;
+}
+
+/**
+ * Delta neto por mes (`nuevo - viejo`) — usado por `OcsService` al editar
+ * una OC que sigue asignada al **mismo** PEP, para ajustar
+ * `SaldoPep.asignacionMensual` sin tener que restar todo y volver a sumar.
+ */
+export function deltaPresupuestoMensual(
+  nuevo: PresupuestoMensual,
+  viejo: PresupuestoMensual,
+): Record<Mes, number> {
+  const resultado = {} as Record<Mes, number>;
+  for (const mes of MESES) {
+    resultado[mes] = (nuevo[mes] ?? 0) - (viejo[mes] ?? 0);
+  }
+  return resultado;
+}
+
 /** Usado por RecepcionesService para validar que el mes de una Recepción esté dentro de la validez de la OC. */
 export function estaMesEnRango(
   mes: string,

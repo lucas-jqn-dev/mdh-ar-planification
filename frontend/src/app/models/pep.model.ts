@@ -61,15 +61,38 @@ export function crearPresupuestoMensualVacio(): PresupuestoMensual {
   };
 }
 
+/**
+ * Colección separada `saldos_peps` (backend/src/master-data/peps/schemas/saldo-pep.schema.ts).
+ * `forecastMensual` es el "presupuesto planificado mensual" que se edita
+ * desde el ABM de PEPs; `asignacionMensual`/`realMensual` están reservados
+ * para un flujo futuro, ningún ABM los carga todavía.
+ */
+export interface SaldoPep {
+  id: string;
+  pep: string;
+  validezDesde: string;
+  validezHasta: string;
+  forecastMensual: PresupuestoMensual;
+  asignacionMensual: PresupuestoMensual;
+  realMensual: PresupuestoMensual;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Pep {
   id: string;
   pepId: string;
   descripcion?: string;
   pais: Pais;
-  presupuestoMensual: PresupuestoMensual;
-  presupuestoTotal: number;
+  /** null en PEPs cargados antes de esta etapa que todavía no tienen SaldoPep (se crea recién al editarlos). */
+  saldoActual: SaldoPep | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type PepPayload = Pick<Pep, 'pepId' | 'descripcion' | 'pais' | 'presupuestoMensual'>;
+export interface PepPayload {
+  pepId: string;
+  descripcion?: string;
+  pais: Pais;
+  forecastMensual: PresupuestoMensual;
+}

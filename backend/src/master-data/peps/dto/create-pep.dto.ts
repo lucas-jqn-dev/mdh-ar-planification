@@ -30,7 +30,8 @@ export class CreatePepDto {
   @IsEnum(PaisPep)
   pais: PaisPep;
 
+  /** Presupuesto planificado mensual — se guarda en `SaldoPep.forecastMensual`, no en el propio Pep. */
   @ValidateNested()
   @Type(() => PresupuestoMensualDto)
-  presupuestoMensual: PresupuestoMensualDto;
+  forecastMensual: PresupuestoMensualDto;
 }

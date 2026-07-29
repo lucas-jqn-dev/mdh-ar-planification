@@ -265,27 +265,63 @@ SAP cargado previamente).
 ### PEPs
 
 Basado en la solapa "2- PEPs" del Excel, simplificado para esta etapa (sin
-los campos TTL IMPUTADO / TTL DISPONIBLE / fila REAL del Excel — eso queda
-para cuando se integren las Recepciones/OC que alimentan lo "imputado").
-Campos: `pepId` (ID del PEP, columna A del Excel, único, obligatorio),
-`descripcion` (libre, opcional), `pais` (select obligatorio, enum
-`Argentina` / `Colombia`) y `presupuestoMensual` (12 montos, uno por mes,
-todos numéricos con default `0`). La tabla principal muestra ID PEP,
-Descripción, País y **Presupuesto planificado** = suma de los 12 meses
-(virtual `presupuestoTotal`, no se persiste, se recalcula siempre desde los
-meses).
+los campos TTL IMPUTADO / TTL DISPONIBLE / fila REAL del Excel). El propio
+`Pep` (`backend/src/master-data/peps/schemas/pep.schema.ts`) solo tiene
+`pepId` (ID del PEP, columna A del Excel, único, obligatorio), `descripcion`
+(libre, opcional) y `pais` (select obligatorio, enum `Argentina` /
+`Colombia`) — **ya no tiene** `presupuestoMensual`: ese dato se movió a una
+colección separada, `saldos_peps` (ver más abajo). La tabla principal
+muestra ID PEP, Descripción, País y **Presupuesto planificado** = suma de
+los 12 meses del presupuesto vigente, calculada en el frontend.
 
-- **Backend**: `backend/src/master-data/peps/` — subdocumento
-  `PresupuestoMensual` (12 props numéricas `min: 0`) embebido en `Pep`
-  (`schemas/pep.schema.ts`), enum `PaisPep` (`Argentina` / `Colombia`),
-  `presupuestoTotal` como virtual Mongoose, `pepId` con índice único (409
-  `ConflictException` si se duplica), CRUD REST en `/master-data/peps`.
+**Colección `saldos_peps`** (`backend/src/master-data/peps/schemas/saldo-pep.schema.ts`,
+modelo `SaldoPep`): cada documento tiene `pep` (ref a `Pep`), `validezDesde`/
+`validezHasta` (formato `"YYYY-MM-DD"`, `1/1` y `31/12` del año calendario
+en curso al crearse, no editables desde ningún ABM todavía) y tres objetos
+de 12 meses con el mismo shape que antes tenía `Pep.presupuestoMensual`:
+`forecastMensual` (el "presupuesto planificado mensual" que se edita desde
+el ABM de PEPs), `asignacionMensual` (sincronizado automáticamente desde las
+OC que apuntan a ese PEP — ver "Sincronización de `asignacionMensual`" en la
+sección de OC más abajo, ningún ABM lo edita a mano) y `realMensual`
+(reservado para un flujo futuro, todavía en `0`). Un PEP se
+relaciona con su saldo vía un **populate virtual reverso**
+(`Pep.saldoActual`, `ref: 'SaldoPep', localField: '_id', foreignField:
+'pep', justOne: true`) — hoy cada PEP tiene un único saldo activo, no hay
+soporte de múltiples períodos de validez por PEP todavía.
+
+- **Backend**: al **crear** un PEP, `PepsService` siempre crea también su
+  `SaldoPep` (`validezDesde`/`validezHasta` del año en curso,
+  `forecastMensual` con los valores del formulario, `asignacionMensual`/
+  `realMensual` en `0`). Al **editar**, hace un upsert por `{ pep: id }`
+  (`findOneAndUpdate(..., { upsert: true, setDefaultsOnInsert: true })`) —
+  si el PEP ya tenía un saldo, actualiza su `forecastMensual`; si es un PEP
+  cargado antes de esta etapa y todavía no tiene saldo, lo crea recién ahí
+  en vez de fallar. Al **eliminar** un PEP, también se borran sus
+  `SaldoPep` asociados (`deleteMany({ pep: id })`) para no dejar
+  documentos huérfanos en `saldos_peps`. `pepId` sigue con índice único
+  (409 `ConflictException` si se duplica). CRUD REST sigue en
+  `/master-data/peps` — el shape de respuesta ahora incluye `saldoActual`
+  anidado en vez de `presupuestoMensual`/`presupuestoTotal` planos.
 - **Frontend**: `frontend/src/app/pages/master-data/peps/` —
-  `pep-form-dialog/` arma dinámicamente 12 `FormControl` a partir del array
-  `MESES` (`models/pep.model.ts`) y muestra un total en vivo (`computed` sobre
+  `pep-form-dialog/` arma dinámicamente 12 `FormControl` (grupo
+  `forecastMensual`, antes `presupuestoMensual`) a partir del array `MESES`
+  (`models/pep.model.ts`) y muestra un total en vivo (`computed` sobre
   `valueChanges` del grupo de meses) mientras se completa el formulario. Los
   montos se formatean con `formatMonto()` (`core/utils/format.util.ts`,
   `Intl.NumberFormat('es-AR')`) tanto en el dialog como en la tabla/cards.
+  Como el backend ya no manda un `presupuestoTotal` virtual, la tabla/cards
+  lo suman en el momento con `sumPresupuestoMensual(pep.saldoActual.forecastMensual)`
+  (`0` si `saldoActual` es `null`, PEP legacy sin saldo todavía).
+
+**Al editar un PEP ya creado, ID PEP/Descripción/País quedan grisados —
+solo el presupuesto planificado mensual sigue editable.** La identidad de
+un PEP no puede cambiar después de creado; `PepFormDialog` deshabilita esos
+tres controles (no todo el form, a diferencia del bloqueo de OC con
+recepciones) en el constructor cuando `isEditMode` es `true`. Como el envío
+del formulario lee cada control por separado (no `form.value`, que excluye
+controles deshabilitados), los valores deshabilitados se siguen mandando
+sin cambios en el `PATCH` — no hace falta lógica especial en el backend
+para "ignorarlos".
 
 > Igual que con `perfilSap` en Consultores: los PEPs creados antes de agregar
 > `pais` no lo tienen en Mongo, se muestra `—` en su lugar hasta que se
@@ -394,6 +430,53 @@ el "Total de la posición" del frontend para mostrar `—`.
   > sumar sobre el mismo mes más de una vez. Limitación consciente, no un bug
   > — mismo criterio de simplicidad que el resto de Datos Maestros en esta
   > etapa.
+
+**Sincronización de `SaldoPep.asignacionMensual`.** Crear, editar o eliminar
+una OC ajusta automáticamente el `asignacionMensual` del `SaldoPep`
+correspondiente a su PEP (colección `saldos_peps`, ver sección PEPs más
+arriba) — así cada PEP acumula en vivo cuánto de su presupuesto ya está
+comprometido por OC cargadas, sin que ningún ABM lo edite a mano. Ejemplo: una
+OC de $1.000.000 en julio–septiembre (→ $333.333,33 por mes) suma esos
+$333.333,33 a `julio`/`agosto`/`septiembre` del `SaldoPep` de su PEP al
+crearse; si luego se edita a $1.500.000, el PEP pasa a tener $500.000 en cada
+uno de esos meses (delta neto, no se resta todo y se vuelve a sumar); si se
+elimina, se resta lo que esa OC había aportado.
+
+- **Backend**: `OcsService` inyecta el modelo `SaldoPep` (`OcsModule` ya
+  importa `PepsModule`, que exporta `MongooseModule` cubriendo tanto `Pep`
+  como `SaldoPep` con un único `forFeature()` — no hizo falta tocar ningún
+  módulo). `oc-presupuesto-mensual.util.ts` suma dos funciones puras:
+  `presupuestoConSigno(presupuesto, signo)` (multiplica los 12 meses por `+1`/
+  `-1`, para sumar al crear o restar al eliminar) y
+  `deltaPresupuestoMensual(nuevo, viejo)` (resta mes a mes, para el caso de
+  edición sin cambio de PEP). El método privado
+  `OcsService.incrementarAsignacionMensual(pepId, deltasPorMes)` aplica un
+  único `$inc` atómico contra `SaldoPep.asignacionMensual.<mes>` por cada mes
+  con delta distinto de cero (usa `findOneAndUpdate` con `upsert: true` por si
+  el PEP todavía no tiene `SaldoPep` — mismo caso legacy que
+  `PepsService.upsertSaldoForecast()`, con la misma validez default del año en
+  curso vía `defaultValidezAnioActual()`, extraída a
+  `master-data/peps/saldo-pep.util.ts` para no duplicarla entre ambos
+  services). En `update()`, `OcsService.reasignarAsignacionMensual()` decide
+  entre un único `$inc` con el delta neto (si el PEP no cambió) o dos `$inc`
+  separados —restar del PEP viejo, sumar al PEP nuevo— si la edición cambió
+  de PEP.
+  > **Gotcha resuelto — no reintroducir**: un `Types.ObjectId` leído de un
+  > documento Mongoose (ej. `existing.pep`, `deleted.pep`) no siempre pasa
+  > `instanceof Types.ObjectId` contra la clase `Types.ObjectId` importada en
+  > otro archivo (dual-package hazard de `mongoose`/`bson` en este monorepo
+  > con npm workspaces) aunque `.toString()` siga devolviendo el hex correcto.
+  > Si ese valor "no calzado" se usa dentro de un `$setOnInsert` de un
+  > `upsert: true`, Mongoose no lo castea bien y MongoDB crea un `SaldoPep`
+  > **duplicado** (con `pep` guardado como string en vez de matchear el
+  > `ObjectId` ya existente) en lugar de actualizar el documento correcto —
+  > confirmado en este proyecto con datos reales de Atlas. La solución es
+  > reconstruir siempre `new Types.ObjectId(pepId.toString())` inmediatamente
+  > antes de usar cualquier valor de PEP en un filtro o `$setOnInsert`/`$set`
+  > contra Mongo — aplicado en `incrementarAsignacionMensual()`,
+  > `PepsService.upsertSaldoForecast()` y el `deleteMany` de
+  > `PepsService.remove()`. Ver detalle largo en el comentario de
+  > `OcsService.incrementarAsignacionMensual()`.
 
 **Tabla de OC: agrupada según el criterio de sorting activo.** El listado
 desktop de OC **no** usa `<table mat-table>` (a diferencia de Perfiles SAP/
@@ -590,10 +673,11 @@ npm run prepare
 - OC: no se agregaron fechas de validez, reparto en hasta 3 PEPs con
   porcentaje, ni el flag "Activo p/elegir?" que sí tiene el Excel — quedó
   fuera de alcance a pedido explícito del usuario.
-- PEPs: ahora que Recepciones y `Oc.presupuestoMensual` ya están cargados,
-  evaluar agregar TTL IMPUTADO / TTL DISPONIBLE (hoy solo existe el
-  presupuesto planificado; lo imputado/recepcionado no se refleja todavía en
-  el PEP, solo se registra por separado en cada `Recepcion`).
+- PEPs: `SaldoPep.asignacionMensual` ya se sincroniza automáticamente desde
+  las OC (ver "Sincronización de `asignacionMensual`" en la sección OC), pero
+  `SaldoPep.realMensual` sigue en `0` — evaluar si debería sincronizarse a su
+  vez desde `Recepcion` (lo efectivamente recepcionado, no solo lo asignado
+  por OC) para completar el trío forecast/asignado/real por PEP.
 - Recepciones: no hay validación de que la suma de horas recepcionadas para
   una OC no supere `Oc.cantidadHoras` (el total contratado) — no fue pedido
   explícitamente, y agregarlo implica decidir qué hacer con recepciones ya

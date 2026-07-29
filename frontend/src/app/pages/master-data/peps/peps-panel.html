@@ -39,7 +39,7 @@
           <dt>País</dt>
           <dd>{{ pep.pais || '—' }}</dd>
           <dt>Presupuesto planificado</dt>
-          <dd>{{ formatMonto(pep.presupuestoTotal) }}</dd>
+          <dd>{{ formatMonto(presupuestoTotal(pep)) }}</dd>
         </dl>
       </mat-card>
     }
@@ -64,7 +64,7 @@
 
       <ng-container matColumnDef="presupuestoTotal">
         <th mat-header-cell *matHeaderCellDef>Presupuesto planificado</th>
-        <td mat-cell *matCellDef="let pep">{{ formatMonto(pep.presupuestoTotal) }}</td>
+        <td mat-cell *matCellDef="let pep">{{ formatMonto(presupuestoTotal(pep)) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="acciones">

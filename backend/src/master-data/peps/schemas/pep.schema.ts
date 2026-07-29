@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { normalizePopulatedRef } from '../../shared/normalize-populated-ref.util';
 
-/** Orden calendario usado tanto para el schema como para sumar el total planificado. */
+/** Orden calendario usado por PresupuestoMensual — reusado por Oc y SaldoPep. */
 export const MESES = [
   'enero',
   'febrero',
@@ -77,6 +78,7 @@ export type PepDocument = HydratedDocument<Pep>;
     transform: (_doc, ret: Record<string, unknown>) => {
       ret.id = String(ret._id);
       delete ret._id;
+      normalizePopulatedRef(ret.saldoActual);
     },
   },
 })
@@ -91,20 +93,27 @@ export class Pep {
   @Prop({ type: String, enum: PaisPep, required: true })
   pais: PaisPep;
 
-  @Prop({ type: PresupuestoMensualSchema, required: true, default: () => ({}) })
-  presupuestoMensual: PresupuestoMensual;
-
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export const PepSchema = SchemaFactory.createForClass(Pep);
 
-PepSchema.virtual('presupuestoTotal').get(function (this: PepDocument) {
-  return MESES.reduce(
-    (total, mes) => total + (this.presupuestoMensual?.[mes] ?? 0),
-    0,
-  );
+/**
+ * Populate virtual (reverso): el saldo mensual (forecast/asignación/real)
+ * de este PEP vive en la colección separada `saldos_peps`
+ * (`SaldoPep.pep` es el lado "dueño" de la relación, no `Pep`). Se
+ * referencia por nombre de modelo ('SaldoPep', string) en vez de importar
+ * la clase, para no crear un ciclo de import con `saldo-pep.schema.ts`
+ * (que sí importa `Pep`/`PresupuestoMensual` desde acá). `justOne: true`
+ * porque hoy cada PEP tiene un único saldo activo — no hay todavía soporte
+ * de múltiples períodos de validez por PEP.
+ */
+PepSchema.virtual('saldoActual', {
+  ref: 'SaldoPep',
+  localField: '_id',
+  foreignField: 'pep',
+  justOne: true,
 });
 
 PepSchema.index({ pepId: 1 }, { unique: true });

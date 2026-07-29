@@ -346,14 +346,64 @@ chicas y verificables.
   el `computed()` lea esa signal en vez del `FormControl` directo. Si un
   `computed()` en un dialog no refleja un cambio de `mat-select`/`input`,
   sospechar primero de esto antes de asumir un bug de Angular Material.
-- **PEPs guarda el presupuesto mensual como subdocumento embebido**
-  (`PresupuestoMensual`, `@Schema({ _id: false })`) con 12 props numéricas
-  fijas (`enero`...`diciembre`), no un array — así el documento en Mongo es
-  auto-descriptivo. El total (`presupuestoTotal`) es un **virtual** de
-  Mongoose (`PepSchema.virtual(...).get(...)`), nunca se persiste, para que no
-  pueda desincronizarse de la suma real de los meses. Si se agrega un campo
-  calculado similar en OC, seguir el mismo patrón (virtual, no campo
-  guardado).
+- **`PresupuestoMensual` (subdocumento `@Schema({ _id: false })` con 12 props
+  numéricas fijas `enero`...`diciembre`, no un array — así el documento en
+  Mongo es auto-descriptivo) se define una sola vez, en
+  `peps/schemas/pep.schema.ts`, y se reusa en tres lugares distintos**:
+  `Oc.presupuestoMensual` (import directo, ver bullet de OC), y
+  `SaldoPep.forecastMensual`/`asignacionMensual`/`realMensual` (tres campos
+  del mismo shape, un `PresupuestoMensualSchema` por campo). No la
+  dupliques si aparece una cuarta necesidad — importala desde acá.
+- **`Pep` (colección `peps`) ya NO tiene `presupuestoMensual` ni
+  `presupuestoTotal`** — se movieron a una colección separada,
+  `saldos_peps` (modelo `SaldoPep`,
+  `peps/schemas/saldo-pep.schema.ts`), a pedido explícito del usuario. Cada
+  `SaldoPep` tiene `pep` (ref a `Pep`, lado "dueño" de la relación),
+  `validezDesde`/`validezHasta` (`"YYYY-MM-DD"`, 1/1 y 31/12 del año en
+  curso al crearse — **no** `Date`, mismo criterio anti-timezone que
+  `mesDesde`/`mesHasta` de `Oc`) y `forecastMensual`/`asignacionMensual`/
+  `realMensual` (`PresupuestoMensual`). `Pep.saldoActual` es un **populate
+  virtual reverso** (`PepSchema.virtual('saldoActual', { ref: 'SaldoPep',
+  localField: '_id', foreignField: 'pep', justOne: true })`) — el `ref` se
+  pasa como **string** (`'SaldoPep'`), no como la clase importada, a
+  propósito: evita cualquier ciclo de import entre `pep.schema.ts` y
+  `saldo-pep.schema.ts` (que sí importa `Pep`/`PresupuestoMensual` desde
+  `pep.schema.ts`). `justOne: true` porque hoy cada PEP tiene un único
+  saldo activo — no hay soporte de múltiples períodos de validez por PEP
+  todavía (el schema lo permitiría, pero ningún flujo lo usa así).
+  `PepSchema`'s `toJSON.transform` normaliza `ret.saldoActual` a mano
+  (`normalizePopulatedRef()`) por el mismo motivo ya documentado para
+  `Oc.pep`/`Oc.consultor`: Mongoose no aplica el `toJSON` del schema
+  referenciado sobre un path populado, ni siquiera si el populate es
+  virtual/reverso. **No hay virtual `forecastTotal` en `SaldoPep`** (a
+  diferencia del viejo `presupuestoTotal` en `Pep`) — no se confirmó que un
+  virtual definido en el schema del lado *populado* efectivamente
+  sobreviva la serialización cuando se lo alcanza vía populate virtual
+  reverso (haría falta probarlo), así que el total se calcula más simple:
+  el frontend suma `forecastMensual` con `sumPresupuestoMensual()`
+  (`models/pep.model.ts`), igual que ya hacía el dialog para el total en
+  vivo — se evitó la incertidumbre en vez de asumir que funcionaría.
+  `PepsService.create()` siempre crea el `SaldoPep` junto con el `Pep`;
+  `update()` hace un **upsert** por `{ pep: id }`
+  (`findOneAndUpdate(..., { upsert: true, setDefaultsOnInsert: true })`,
+  `validezDesde`/`validezHasta` solo en `$setOnInsert` — nunca se pisan en
+  una edición) para que un PEP legacy sin saldo (creado antes de esta
+  etapa) pueda recibir uno recién al editarlo, en vez de fallar; `remove()`
+  hace `saldoPepModel.deleteMany({ pep: id })` después de borrar el Pep,
+  para no dejar `SaldoPep` huérfanos (cascade delete deliberado, distinto
+  del "sin integridad referencial" que aplica en la dirección
+  Oc→Consultor/Pep — acá `SaldoPep` es un hijo estrictamente propio del
+  Pep, sin valor por sí solo si el Pep ya no existe).
+- **`PepFormDialog` deshabilita `pepId`/`descripcion`/`pais` en modo
+  edición** (no `forecastMensual`, que sigue editable) — la identidad de un
+  PEP no puede cambiar después de creado, a pedido explícito. Se
+  deshabilitan esos tres controles puntuales en el constructor cuando
+  `isEditMode` es `true`, no todo el `FormGroup` (a diferencia del bloqueo
+  de OC con recepciones, que si necesita deshabilitar todo). Como
+  `submit()` lee cada control por separado (`this.form.controls.pepId.value`,
+  no `form.value`, que excluye controles deshabilitados), los valores
+  deshabilitados se siguen mandando sin cambios en el `PATCH` — no hace
+  falta lógica en el backend para "ignorarlos", porque nunca cambian.
 - **`pages/master-data` es un shell delgado, PERO los `<mat-expansion-panel>`
   viven en `master-data.html`, no en los componentes hijos.** Cada sub-módulo
   (`ConsultoresPanel`, `PepsPanel`) es un componente aparte que renderiza
@@ -655,12 +705,34 @@ chicas y verificables.
   el usuario — definir si este proyecto va a tener su propio repo o se integra
   al existente antes de correr `npm run prepare`.
 - "Olvidé mi contraseña": explícitamente fuera de alcance.
+- Reestructuración de PEPs (`Pep` sin `presupuestoMensual`, colección
+  `saldos_peps` nueva, campos de identidad grisados al editar): se verificó
+  en el navegador contra el MongoDB Atlas real del usuario — crear un PEP
+  nuevo generó su `SaldoPep` con `validezDesde`/`validezHasta` del año en
+  curso (2026-01-01/2026-12-31) y `forecastMensual` con los valores
+  cargados; la tabla mostró el total sumado correctamente; al editar, ID
+  PEP/Descripción/País aparecieron deshabilitados (`disabled: true`) y los
+  12 inputs de mes siguieron editables y prefilled; guardar un cambio de
+  mes hizo un `PATCH` que actualizó el **mismo** `SaldoPep` (mismo `id`,
+  mismo `validezDesde`/`validezHasta`) en vez de crear uno nuevo,
+  confirmando que el upsert por `{ pep: id }` funciona. No se verificó
+  manualmente el cascade delete de `SaldoPep` al eliminar un Pep (el código
+  es un `deleteMany` de una sola línea, bajo riesgo) ni el caso de un PEP
+  legacy sin `saldoActual` (no había ninguno disponible para probar en esa
+  sesión).
 - PEPs quedó deliberadamente simplificado respecto al Excel: no tiene
-  TTL IMPUTADO / TTL DISPONIBLE ni la fila REAL. Ahora que OC **y**
-  Recepciones ya están cargados, revisar si conviene agregarlos — hoy lo
-  recepcionado se registra en `Recepcion` pero no se refleja de vuelta en el
-  Pep ni en `Oc.presupuestoMensual` (son lecturas independientes, no hay un
-  cálculo que las cruce).
+  TTL IMPUTADO / TTL DISPONIBLE ni la fila REAL. `SaldoPep` ya tiene los
+  campos preparados para eso (`asignacionMensual`, `realMensual`, además de
+  `forecastMensual`) pero ningún flujo los carga todavía — hoy lo
+  recepcionado se registra en `Recepcion` pero no se refleja de vuelta en
+  `SaldoPep.realMensual` ni en `Oc.presupuestoMensual` (son lecturas
+  independientes, no hay un cálculo que las cruce). Ahora que OC, Recepciones
+  y `saldos_peps` ya están cargados, evaluar si conviene conectarlos.
+- `SaldoPep`: sin soporte de múltiples períodos de validez por PEP — el
+  schema tiene `validezDesde`/`validezHasta` pero `Pep.saldoActual` asume
+  `justOne: true` (un solo saldo activo). Si el negocio necesita
+  presupuestos por año/período, hay que decidir cómo elegir "el" saldo
+  vigente en vez de simplemente el único que existe.
 - OC quedó deliberadamente simplificado respecto al Excel: `mesDesde`/
   `mesHasta` tienen granularidad de mes (no día completo como `F. Desde`/
   `F. Hasta`), sin reparto en hasta 3 PEPs con porcentaje, sin el flag

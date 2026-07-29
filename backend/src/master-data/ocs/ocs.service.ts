@@ -7,9 +7,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateOcDto } from './dto/create-oc.dto';
 import { UpdateOcCompletadaDto } from './dto/update-oc-completada.dto';
-import { calcularPresupuestoMensual } from './oc-presupuesto-mensual.util';
+import {
+  calcularPresupuestoMensual,
+  deltaPresupuestoMensual,
+  presupuestoConSigno,
+} from './oc-presupuesto-mensual.util';
 import { Oc, OcDocument } from './schemas/oc.schema';
-import { Pep, PepDocument } from '../peps/schemas/pep.schema';
+import { Mes, Pep, PepDocument } from '../peps/schemas/pep.schema';
+import { SaldoPep, SaldoPepDocument } from '../peps/schemas/saldo-pep.schema';
+import { defaultValidezAnioActual } from '../peps/saldo-pep.util';
 import {
   Consultor,
   ConsultorDocument,
@@ -35,6 +41,8 @@ export class OcsService {
     private readonly consultorModel: Model<ConsultorDocument>,
     @InjectModel(Recepcion.name)
     private readonly recepcionModel: Model<RecepcionDocument>,
+    @InjectModel(SaldoPep.name)
+    private readonly saldoPepModel: Model<SaldoPepDocument>,
   ) {}
 
   findAll(): Promise<OcDocument[]> {
@@ -64,6 +72,11 @@ export class OcsService {
       presupuestoMensual,
     });
 
+    await this.incrementarAsignacionMensual(
+      new Types.ObjectId(dto.pepId),
+      presupuestoConSigno(presupuestoMensual, 1),
+    );
+
     return created.populate([
       { path: 'pep' },
       { path: 'consultor', populate: { path: 'perfilSap' } },
@@ -75,6 +88,12 @@ export class OcsService {
     await this.assertSinRecepciones(id, 'editar');
     await this.assertPepExists(dto.pepId);
     await this.assertConsultorExists(dto.consultorId);
+
+    const existing = await this.ocModel.findById(id).exec();
+
+    if (!existing) {
+      throw new NotFoundException(NOT_FOUND_MESSAGE);
+    }
 
     const presupuestoMensual = await this.calcularPresupuestoMensualDto(dto);
 
@@ -101,6 +120,12 @@ export class OcsService {
     if (!updated) {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
     }
+
+    await this.reasignarAsignacionMensual(
+      existing,
+      dto.pepId,
+      presupuestoMensual,
+    );
 
     return updated;
   }
@@ -137,6 +162,11 @@ export class OcsService {
     if (!deleted) {
       throw new NotFoundException(NOT_FOUND_MESSAGE);
     }
+
+    await this.incrementarAsignacionMensual(
+      deleted.pep,
+      presupuestoConSigno(deleted.presupuestoMensual, -1),
+    );
   }
 
   private async assertPepExists(pepId: string): Promise<void> {
@@ -212,5 +242,87 @@ export class OcsService {
       .exec();
 
     return consultor?.perfilSap?.tarifaHora ?? 0;
+  }
+
+  /**
+   * Mantiene `SaldoPep.asignacionMensual` sincronizado tras editar una OC
+   * ya existente. Si el PEP no cambió, aplica el delta neto (`nuevo -
+   * viejo`) en un solo `$inc`; si cambió, resta el presupuesto viejo del
+   * PEP anterior y suma el nuevo al PEP nuevo (dos `$inc` separados) — mismo
+   * criterio que usa `RecepcionesService.ajustarHorasConsumidas()` para el
+   * caso análogo de `Oc.horasConsumidas`.
+   */
+  private async reasignarAsignacionMensual(
+    existing: OcDocument,
+    nuevoPepId: string,
+    nuevoPresupuesto: OcDocument['presupuestoMensual'],
+  ): Promise<void> {
+    const pepCambio = existing.pep.toString() !== nuevoPepId;
+
+    if (pepCambio) {
+      await this.incrementarAsignacionMensual(
+        existing.pep,
+        presupuestoConSigno(existing.presupuestoMensual, -1),
+      );
+      await this.incrementarAsignacionMensual(
+        new Types.ObjectId(nuevoPepId),
+        presupuestoConSigno(nuevoPresupuesto, 1),
+      );
+      return;
+    }
+
+    await this.incrementarAsignacionMensual(
+      existing.pep,
+      deltaPresupuestoMensual(nuevoPresupuesto, existing.presupuestoMensual),
+    );
+  }
+
+  /**
+   * Aplica un `$inc` atómico por mes contra `SaldoPep.asignacionMensual`
+   * del PEP indicado. Si ese PEP todavía no tiene `SaldoPep` (legacy, nunca
+   * editado desde que se creó `saldos_peps`), lo upsertea con la validez
+   * default del año en curso — mismo patrón que
+   * `PepsService.upsertSaldoForecast()`.
+   *
+   * `pepId` se reconstruye siempre con `new Types.ObjectId(pepId.toString())`
+   * antes de usarlo — un `Types.ObjectId` leído de un documento Mongoose
+   * (`existing.pep`/`deleted.pep`) no siempre pasa `instanceof
+   * Types.ObjectId` contra la clase importada acá (dual package hazard de
+   * `mongoose`/`bson` dentro de este monorepo con npm workspaces), y en ese
+   * caso Mongoose lo escribe tal cual en `$setOnInsert` — como un valor que
+   * NO calza con el `pep: ObjectId(...)` ya guardado en el `SaldoPep`
+   * original, el `upsert` no lo encuentra y crea un `SaldoPep` **duplicado**
+   * con `pep` como string. Reconstruir explícitamente el ObjectId a partir
+   * del string evita esto sin depender de que el objeto de entrada ya sea
+   * "suficientemente ObjectId".
+   */
+  private async incrementarAsignacionMensual(
+    pepId: Types.ObjectId,
+    deltasPorMes: Record<Mes, number>,
+  ): Promise<void> {
+    const incFields: Record<string, number> = {};
+    for (const [mes, monto] of Object.entries(deltasPorMes)) {
+      if (monto) {
+        incFields[`asignacionMensual.${mes}`] = monto;
+      }
+    }
+
+    if (Object.keys(incFields).length === 0) {
+      return;
+    }
+
+    const pepObjectId = new Types.ObjectId(pepId.toString());
+    const { validezDesde, validezHasta } = defaultValidezAnioActual();
+
+    await this.saldoPepModel
+      .findOneAndUpdate(
+        { pep: pepObjectId },
+        {
+          $inc: incFields,
+          $setOnInsert: { pep: pepObjectId, validezDesde, validezHasta },
+        },
+        { upsert: true, setDefaultsOnInsert: true },
+      )
+      .exec();
   }
 }

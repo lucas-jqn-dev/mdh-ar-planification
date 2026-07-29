@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Pep } from '../../../models/pep.model';
+import { Pep, sumPresupuestoMensual } from '../../../models/pep.model';
 import { formatMonto } from '../../../core/utils/format.util';
 import { injectIsHandset } from '../../../core/utils/breakpoint.util';
 import { PepsService } from './peps.service';
@@ -17,6 +17,11 @@ const SNACKBAR_DURATION_MS = 4000;
 
 function sortPeps(items: Pep[]): Pep[] {
   return [...items].sort((a, b) => a.pepId.localeCompare(b.pepId));
+}
+
+/** `presupuestoTotal` ya no viene del backend (vivía en `Pep`, ahora `forecastMensual` vive en `SaldoPep`) — se suma acá, `0` si el PEP todavía no tiene saldo. */
+function presupuestoTotal(pep: Pep): number {
+  return pep.saldoActual ? sumPresupuestoMensual(pep.saldoActual.forecastMensual) : 0;
 }
 
 @Component({
@@ -33,6 +38,7 @@ export class PepsPanel {
 
   readonly isHandset = injectIsHandset();
   readonly formatMonto = formatMonto;
+  readonly presupuestoTotal = presupuestoTotal;
   readonly displayedColumns = ['pepId', 'descripcion', 'pais', 'presupuestoTotal', 'acciones'];
 
   readonly peps = signal<Pep[]>([]);
