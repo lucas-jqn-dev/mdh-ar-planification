@@ -22,10 +22,12 @@ chicas y verificables.
   marca (Easy Cencosud: rojo/amarillo, Poppins/Nunito, logo real). El nombre
   de la app es **"MDH AR • Planificador"** (lo cambió el usuario editando
   `login.html`/`index.html` directamente mientras se trabajaba — mantené ese
-  nombre en cualquier lugar nuevo que muestre el nombre de la app). Las
-  páginas `Home` y `Recepciones`, y el panel "OCs" de Datos Maestros, siguen
-  siendo placeholders a propósito — no están "a medio hacer", es el alcance
-  pedido hasta ahora.
+  nombre en cualquier lugar nuevo que muestre el nombre de la app). La
+  página `Home` sigue siendo un placeholder a propósito — no está "a medio
+  hacer", es el alcance pedido hasta ahora.
+- **Etapa 3**: ABM de Recepciones (`/order_recepcions`, fuera del acordeón de
+  Datos Maestros — es un registro operativo contra las OC ya cargadas, no un
+  catálogo maestro) — ver sección "Recepciones" abajo.
 
 ## Decisiones de arquitectura (y por qué)
 
@@ -369,6 +371,75 @@ chicas y verificables.
   `frontend/src/app/core/utils/breakpoint.util.ts`) es la forma estándar de
   alternar tabla (desktop) vs. cards apiladas (mobile) — reusarlo en vez de
   volver a instanciar `BreakpointObserver` a mano.
+- **`Recepcion` vive fuera de `master-data/` a propósito**, tanto en backend
+  (`backend/src/recepciones/`, módulo top-level registrado directo en
+  `AppModule`, no dentro de `MasterDataModule`) como en frontend
+  (`frontend/src/app/pages/order-recepcions/`, página propia con su propio
+  ítem de nav, no un panel más del acordeón de Datos Maestros). Motivo: una
+  Recepción es un **registro operativo** de lo ya recepcionado contra una OC
+  ya cargada (crece indefinidamente con el tiempo, una fila por evento), no
+  un catálogo maestro de referencia como Perfiles SAP/Consultores/PEPs/OC —
+  encaja mejor con el criterio ya usado para separar "Datos Maestros" de
+  "Home"/"Recepciones" como ítems de nav de primer nivel desde el arranque
+  del proyecto.
+- **`Oc.pep`, `Oc.consultor` y `Oc.consultor.perfilSap` de una Recepción se
+  leen siempre en vivo**, exactamente el mismo criterio "sin snapshot" que
+  ya usa `Oc` para sus propios refs (ver bullet más arriba). `RecepcionesService`
+  puebla con `.populate([{ path: 'oc', populate: [{ path: 'pep' }, { path:
+  'consultor', populate: { path: 'perfilSap' } }] }])` — mismo doble-populate
+  que `OcsService.findAll()`, un nivel más adentro (bajo `oc`). El
+  `toJSON.transform` de `recepcion.schema.ts` reusa `normalizePopulatedRef()`
+  para los **cuatro** niveles (`oc`, `oc.pep`, `oc.consultor`,
+  `oc.consultor.perfilSap`) a mano, porque Mongoose no aplica el `toJSON` de
+  un schema referenciado sobre ningún nivel de un path populado (mismo
+  gotcha que ya documenta `oc.schema.ts`, un nivel más profundo acá).
+- **`OcsModule` exporta `MongooseModule`** (agregado para poder construir
+  `RecepcionesModule`), mismo patrón que ya usaban `ConsultoresModule` y
+  `PepsModule` para que `OcsModule` pudiera inyectar sus modelos —
+  `RecepcionesModule` importa `OcsModule` para inyectar `Model<OcDocument>`
+  en `RecepcionesService` sin duplicar su `forFeature()`.
+- **`estaMesEnRango()` (exportada desde
+  `master-data/ocs/oc-presupuesto-mensual.util.ts`) valida en el backend que
+  el `mes` de una Recepción esté dentro de `mesDesde`/`mesHasta` de la OC
+  elegida**, reusando la misma conversión `"YYYY-MM"` → mes absoluto que ya
+  usa `calcularPresupuestoMensual()`. El `<mat-select>` de mes del frontend
+  ya restringe las opciones visibles (`enumerarMeses()` en `oc.model.ts`,
+  espejo TypeScript de la función interna homónima del backend, pero
+  devolviendo `"YYYY-MM"` completos en vez de solo nombres de mes — acá sí
+  importa el año, a diferencia de `PresupuestoMensual`), pero el backend
+  igual valida por su cuenta: no confía en que el cliente no haya mandado un
+  payload armado a mano.
+- **`RecepcionFormDialog` resetea el `FormControl` de mes al cambiar de OC**
+  (`form.controls.oc.valueChanges.subscribe(() => mes.setValue(null))` en el
+  constructor) para que no quede seleccionado un mes que perteneció al rango
+  de la OC anterior. Esto no dispara en la carga inicial del dialog en modo
+  edición porque `valueChanges` de Angular Reactive Forms solo emite ante
+  cambios *posteriores* al valor inicial pasado al `FormControl`, nunca por
+  ese valor inicial en sí — mismo principio que ya aprovecha
+  `oc-form-dialog.ts` para no perder el prefill al abrir en modo edición.
+- **El campo de OC de `RecepcionFormDialog` es un `MatAutocomplete`, no un
+  `mat-select`** — a pedido explícito, para poder escribir el número de OC y
+  filtrar en vivo. Sigue el patrón oficial de Angular Material para
+  "autocomplete con objetos": el `FormControl` (tipado `Oc | string | null`,
+  alias `OcControlValue`) guarda un **string** mientras el usuario tipea (el
+  texto de búsqueda) y pasa a guardar la **`Oc` completa** al elegir una
+  opción (`[value]="option"` en cada `mat-option`); `[displayWith]="ocDisplayFn"`
+  en el `<mat-autocomplete>` decide qué mostrar en el input para cada caso.
+  Un validador custom (`ocSeleccionadaValidator`, error `ocInvalida`) rechaza
+  el submit si el valor quedó en un string suelto — el usuario tipeó pero
+  nunca clickeó una opción de la lista, así que no hay una OC real elegida
+  todavía. `assignableOcs` filtra `ocs()` a `!oc.completada` (**solo
+  pendientes**, a pedido explícito) y le suma la OC de la recepción en
+  edición si esa ya no estuviera pendiente (para no dejar el campo sin poder
+  mostrar/conservar el valor actual al editar una recepción vieja).
+  `filteredOcs` filtra `assignableOcs()` por `oc.numeroOc` cuando el valor
+  del control es un string (búsqueda en curso) — **no** matchea por SolPed,
+  Consultor ni ningún otro campo, a propósito, porque el pedido fue
+  específicamente "escribir el número de OC". Las opciones (y el valor ya
+  elegido en el input) se renderizan con `ocOptionLabel()`: **NRO OC /
+  POSICIÓN / CONSULTOR / PROVEEDOR**, en ese orden y separadas por `" / "` —
+  formato pedido explícitamente, no el mismo que usa `oc-form-dialog.ts`
+  para sus propios selects de PEP/Consultor.
 
 ## Gotchas ya resueltos (no los reintroduzcas)
 
@@ -506,9 +577,11 @@ chicas y verificables.
   al existente antes de correr `npm run prepare`.
 - "Olvidé mi contraseña": explícitamente fuera de alcance.
 - PEPs quedó deliberadamente simplificado respecto al Excel: no tiene
-  TTL IMPUTADO / TTL DISPONIBLE ni la fila REAL (eso depende de datos que
-  todavía no existen en la app — Recepciones). Ahora que OC ya está cargado,
-  revisar si conviene agregarlos.
+  TTL IMPUTADO / TTL DISPONIBLE ni la fila REAL. Ahora que OC **y**
+  Recepciones ya están cargados, revisar si conviene agregarlos — hoy lo
+  recepcionado se registra en `Recepcion` pero no se refleja de vuelta en el
+  Pep ni en `Oc.presupuestoMensual` (son lecturas independientes, no hay un
+  cálculo que las cruce).
 - OC quedó deliberadamente simplificado respecto al Excel: `mesDesde`/
   `mesHasta` tienen granularidad de mes (no día completo como `F. Desde`/
   `F. Hasta`), sin reparto en hasta 3 PEPs con porcentaje, sin el flag
@@ -524,7 +597,26 @@ chicas y verificables.
 - Migración de datos: los Consultores/PEPs cargados antes de esta etapa no
   tienen `perfilSap`/`pais`. Si se quiere que dejen de mostrar `—`, hay que
   decidir con el usuario un valor a asignarles (no se puede inferir solo).
-- Página "Recepciones" (`/order_recepcions`): placeholder en blanco, sin
-  analizar todavía la solapa "( Recepciones )" del Excel.
+- Recepciones (`/order_recepcions`): ABM completo — alta (con select de OC,
+  bloque derivado de datos del Consultor/Perfil SAP, select de mes acotado
+  al rango de validez de la OC elegida, horas recepcionadas y Documento 103
+  obligatorios), edición, baja inline y listado responsive — se verificó en
+  el navegador contra el MongoDB Atlas real del usuario: alta con el select
+  de mes mostrando exactamente los tres meses de una OC julio–septiembre,
+  el `POST` guardando `oc`/`mes`/`horasRecepcionadas`/`documento103` con la
+  cadena de populate completa (`oc.pep`, `oc.consultor.perfilSap`)
+  correctamente normalizada en la respuesta, edición reabriendo el dialog
+  con los mismos valores precargados, eliminación con confirmación inline
+  quitando la fila de la tabla, y el botón "Crear" quedando deshabilitado
+  (sin disparar validación) mientras horas/Documento 103 están vacíos —
+  mismo comportamiento ya documentado más abajo para botones
+  `[disabled]="form.invalid"`. No se testeó manualmente la vista de cards en
+  mobile para este panel en particular (mismo `injectIsHandset()` que ya
+  está verificado en el resto de la app), ni el caso de una OC cuyo rango
+  cruce fin de año.
+- Recepciones: no hay validación de que la suma de horas recepcionadas de
+  una OC no supere `Oc.cantidadHoras` — no fue pedido, y decidir qué hacer
+  si ya hay recepciones cargadas que superarían ese tope requiere una
+  decisión de negocio explícita.
 - Tests: la estructura está preparada (Jest en backend, Vitest en frontend
   vía Angular CLI 21) pero no hay tests escritos todavía.

@@ -48,3 +48,24 @@ export function parseMesAnio(mesAnio: string): Date {
 export function formatDateAsMesAnio(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/**
+ * Enumera "YYYY-MM" entre mesDesde y mesHasta (ambos inclusive) — ej. para
+ * poblar el desplegable de "mes a recepcionar" del dialog de Recepciones.
+ * Espejo de `mesesEnRango`/`toMesAbsoluto` en
+ * `backend/src/master-data/ocs/oc-presupuesto-mensual.util.ts`.
+ */
+export function enumerarMeses(mesDesde: string, mesHasta: string): string[] {
+  const [anioDesde, mesNumDesde] = mesDesde.split('-').map(Number);
+  const [anioHasta, mesNumHasta] = mesHasta.split('-').map(Number);
+  const desde = anioDesde * 12 + (mesNumDesde - 1);
+  const hasta = anioHasta * 12 + (mesNumHasta - 1);
+
+  const meses: string[] = [];
+  for (let mesAbsoluto = desde; mesAbsoluto <= hasta; mesAbsoluto++) {
+    const anio = Math.floor(mesAbsoluto / 12);
+    const mes = (mesAbsoluto % 12) + 1;
+    meses.push(`${anio}-${String(mes).padStart(2, '0')}`);
+  }
+  return meses;
+}

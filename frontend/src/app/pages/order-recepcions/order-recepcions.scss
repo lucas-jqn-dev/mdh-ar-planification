@@ -1,0 +1,61 @@
+.panel-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.panel-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.panel-table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.panel-table {
+  width: 100%;
+}
+
+.recepcion-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recepcion-card {
+  padding: 1rem;
+}
+
+.recepcion-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.recepcion-card-title {
+  font: var(--mat-sys-title-medium);
+}
+
+.recepcion-card-details {
+  margin: 0.75rem 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.recepcion-card-details dt {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+.recepcion-card-details dd {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+}

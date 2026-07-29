@@ -179,7 +179,7 @@ Tras el login, `layout/shell` provee un menú lateral con tres rutas hijas de
 | ------------------- | ---------------- | -------------------------------- |
 | `/home`             | Home            | Placeholder                      |
 | `/master_data`      | Datos Maestros  | ABM de Perfiles SAP, Consultores, PEPs y OC implementado |
-| `/order_recepcions` | Recepciones     | Placeholder                      |
+| `/order_recepcions` | Recepciones     | ABM completo implementado        |
 
 **Sidenav en desktop: expandible/contraíble, siempre visible.** A diferencia
 de mobile (donde el `mat-sidenav` es `mode="over"`, oculto por default y se
@@ -431,6 +431,61 @@ PEPs y el array
 `MESES` de PEPs se definen dos veces a propósito (backend y frontend, sin
 paquete compartido en este monorepo) — ver detalle en CLAUDE.md.
 
+## Recepciones
+
+Página propia (`/order_recepcions`), **fuera** del acordeón de Datos
+Maestros (es un registro operativo de lo ya recepcionado contra una OC
+cargada, no un catálogo maestro) — mismo motivo por el que su backend vive en
+`backend/src/recepciones/` en vez de bajo `master-data/`. ABM completo: cada
+recepción registra `oc` (ref a una posición de OC ya cargada), `mes`
+(`"YYYY-MM"`, debe caer dentro de `mesDesde`/`mesHasta` de esa OC),
+`horasRecepcionadas` (número positivo) y `documento103` (texto libre, el comprobante del proceso
+SAP) — los cuatro obligatorios.
+
+- **Alta**: el botón "Nueva recepción" abre un dialog con un campo de OC tipo
+  **autocomplete** (`<input matInput [matAutocomplete]>`, no un
+  `<mat-select>`) — se escribe el número de OC y la lista de opciones se va
+  filtrando en vivo. Solo ofrece OC **pendientes** (`!oc.completada`; carga
+  `GET /master-data/ocs`, reusando `OcsService` del módulo de Datos Maestros
+  — sin duplicar el fetch), salvo que se esté editando una recepción cuya OC
+  ya se haya marcado como completada después de creada, en cuyo caso esa OC
+  se sigue ofreciendo para no dejar el campo sin poder mostrar el valor
+  actual. Cada opción — y el valor una vez elegido — se muestra como **NRO
+  OC / POSICIÓN / CONSULTOR / PROVEEDOR**. Al elegir una OC, el dialog
+  muestra además, de solo lectura, **OC, Posición, Consultor, Proveedor,
+  Tarifa hora, Cant. de horas OC e ID PEP** (derivados del Consultor/Perfil
+  SAP ya poblados, igual criterio "sin snapshot" que `oc-form-dialog`), y
+  puebla un `<mat-select>` de "Mes a recepcionar" con **todos** los meses
+  entre `mesDesde` y `mesHasta` de esa OC (inclusive) — ej. una OC de julio a
+  septiembre ofrece Julio/Agosto/Septiembre, no solo los extremos. Por
+  último, dos inputs obligatorios: horas a recepcionar y Documento 103.
+- **Backend**: `backend/src/recepciones/` — `Recepcion.oc` es un `ref` a
+  `Oc` (`master-data/ocs/schemas/oc.schema.ts`); `RecepcionesService`
+  valida con `estaMesEnRango()` (exportada desde
+  `master-data/ocs/oc-presupuesto-mensual.util.ts`, reusada de la misma
+  lógica que reparte `presupuestoMensual`) que el `mes` recibido esté
+  realmente dentro de la validez de la OC antes de guardar — el `<mat-select>`
+  del frontend ya restringe las opciones, pero el backend no confía en eso.
+  `RecepcionesModule` importa `OcsModule` (que ahora exporta `MongooseModule`,
+  igual que `ConsultoresModule`/`PepsModule`) para poder inyectar el modelo
+  `Oc` sin re-registrar su `forFeature()`. `findAll()` puebla `oc` con
+  `pep` y `consultor.perfilSap` anidados (mismo doble-populate que
+  `OcsService.findAll()`, un nivel más profundo) — el `toJSON.transform` de
+  `Recepcion` normaliza `_id → id` en los tres niveles a mano (`oc`, `oc.pep`,
+  `oc.consultor`, `oc.consultor.perfilSap`), reusando
+  `normalizePopulatedRef()`. CRUD REST en `/recepciones` (no
+  `/master-data/recepciones` — está fuera del namespace de Datos Maestros).
+- **Frontend**: `frontend/src/app/pages/order-recepcions/` — listado con
+  tabla desktop (`<table mat-table>`, igual patrón simple que
+  Consultores/PEPs/Perfiles SAP) / cards en mobile, ambos leyendo `oc.solped`,
+  `oc.posicion`, `oc.numeroOc`, `oc.consultor.nombre` y `oc.pep.pepId` con
+  fallback `—` si la OC referenciada fue borrada (sin integridad
+  referencial, mismo criterio que el resto del dominio). `oc.model.ts` suma
+  `enumerarMeses(mesDesde, mesHasta)` — espejo en TypeScript de la función
+  homónima interna de `oc-presupuesto-mensual.util.ts` en el backend, pero
+  devolviendo `"YYYY-MM"` completos (no solo nombres de mes) porque acá sí
+  importa distinguir el año al elegir qué mes recepcionar.
+
 ## Identidad visual
 
 Colores y tipografía tomados del logo de Easy Cencosud
@@ -493,10 +548,16 @@ npm run prepare
 - OC: no se agregaron fechas de validez, reparto en hasta 3 PEPs con
   porcentaje, ni el flag "Activo p/elegir?" que sí tiene el Excel — quedó
   fuera de alcance a pedido explícito del usuario.
-- PEPs: cuando se integren Recepciones/OC (ya cargadas), evaluar agregar TTL
-  IMPUTADO / TTL DISPONIBLE (hoy solo existe el presupuesto planificado).
-- Página "Recepciones" (`/order_recepcions`): todavía es un placeholder en
-  blanco.
+- PEPs: ahora que Recepciones y `Oc.presupuestoMensual` ya están cargados,
+  evaluar agregar TTL IMPUTADO / TTL DISPONIBLE (hoy solo existe el
+  presupuesto planificado; lo imputado/recepcionado no se refleja todavía en
+  el PEP, solo se registra por separado en cada `Recepcion`).
+- Recepciones: no hay validación de que la suma de horas recepcionadas para
+  una OC no supere `Oc.cantidadHoras` (el total contratado) — no fue pedido
+  explícitamente, y agregarlo implica decidir qué hacer con recepciones ya
+  cargadas si se llegara a superar. Tampoco hay integridad referencial al
+  borrar una OC que ya tiene recepciones (mismo criterio que el resto del
+  dominio): la recepción queda con `oc: null` y se renderiza como `—`.
 - Evaluar si el CRUD de Datos Maestros debería restringirse a rol ADMIN
   (`RolesGuard` + `@Roles()` ya están armados en el backend, solo falta
   aplicarlos si se decide restringir).

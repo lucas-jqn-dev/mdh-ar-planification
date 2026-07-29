@@ -35,6 +35,23 @@ export function calcularPresupuestoMensual(
   return base;
 }
 
+/** Usado por RecepcionesService para validar que el mes de una Recepción esté dentro de la validez de la OC. */
+export function estaMesEnRango(
+  mes: string,
+  mesDesde: string,
+  mesHasta: string,
+): boolean {
+  const mesAbsoluto = toMesAbsoluto(mes);
+  const desde = toMesAbsoluto(mesDesde);
+  const hasta = toMesAbsoluto(mesHasta);
+
+  if (mesAbsoluto === null || desde === null || hasta === null) {
+    return false;
+  }
+
+  return mesAbsoluto >= desde && mesAbsoluto <= hasta;
+}
+
 function mesesEnRango(mesDesde: string, mesHasta: string): Mes[] {
   const desde = toMesAbsoluto(mesDesde);
   const hasta = toMesAbsoluto(mesHasta);

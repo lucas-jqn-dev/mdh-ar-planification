@@ -1,1 +1,121 @@
 <h1>Recepciones</h1>
+
+<div class="panel-toolbar">
+  <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Nueva recepción
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="panel-state">
+    <mat-spinner diameter="32" />
+  </div>
+} @else if (errorMessage()) {
+  <div class="panel-state" role="alert">
+    <p>{{ errorMessage() }}</p>
+  </div>
+} @else if (recepciones().length === 0) {
+  <div class="panel-state">
+    <p>Todavía no hay recepciones cargadas.</p>
+  </div>
+} @else if (isHandset()) {
+  <div class="recepcion-cards">
+    @for (recepcion of recepciones(); track recepcion.id) {
+      <mat-card class="recepcion-card">
+        <div class="recepcion-card-header">
+          <span class="recepcion-card-title">
+            {{ recepcion.oc ? 'SolPed ' + recepcion.oc.solped + ' · Pos. ' + recepcion.oc.posicion : '—' }}
+          </span>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar recepción de ' + recepcion.horasRecepcionadas + ' horas'"
+            (click)="openEditDialog(recepcion)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </div>
+        <dl class="recepcion-card-details">
+          <dt>Número OC</dt>
+          <dd>{{ recepcion.oc?.numeroOc || '—' }}</dd>
+          <dt>Consultor</dt>
+          <dd>{{ recepcion.oc?.consultor ? recepcion.oc!.consultor!.nombre : '—' }}</dd>
+          <dt>PEP</dt>
+          <dd>{{ recepcion.oc?.pep ? recepcion.oc!.pep!.pepId : '—' }}</dd>
+          <dt>Mes recepcionado</dt>
+          <dd>{{ formatMesAnio(recepcion.mes) }}</dd>
+          <dt>Horas recepcionadas</dt>
+          <dd>{{ recepcion.horasRecepcionadas }}</dd>
+          <dt>Documento 103</dt>
+          <dd>{{ recepcion.documento103 }}</dd>
+        </dl>
+      </mat-card>
+    }
+  </div>
+} @else {
+  <div class="panel-table-wrapper">
+    <table mat-table [dataSource]="recepciones()" class="panel-table">
+      <ng-container matColumnDef="solped">
+        <th mat-header-cell *matHeaderCellDef>SolPed</th>
+        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.solped || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="posicion">
+        <th mat-header-cell *matHeaderCellDef>Posición</th>
+        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.posicion ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="numeroOc">
+        <th mat-header-cell *matHeaderCellDef>Número OC</th>
+        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.numeroOc || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="consultor">
+        <th mat-header-cell *matHeaderCellDef>Consultor</th>
+        <td mat-cell *matCellDef="let recepcion">
+          {{ recepcion.oc?.consultor ? recepcion.oc!.consultor!.nombre : '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="pep">
+        <th mat-header-cell *matHeaderCellDef>PEP</th>
+        <td mat-cell *matCellDef="let recepcion">
+          {{ recepcion.oc?.pep ? recepcion.oc!.pep!.pepId : '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="mes">
+        <th mat-header-cell *matHeaderCellDef>Mes recepcionado</th>
+        <td mat-cell *matCellDef="let recepcion">{{ formatMesAnio(recepcion.mes) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="horas">
+        <th mat-header-cell *matHeaderCellDef>Horas recepcionadas</th>
+        <td mat-cell *matCellDef="let recepcion">{{ recepcion.horasRecepcionadas }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="documento103">
+        <th mat-header-cell *matHeaderCellDef>Documento 103</th>
+        <td mat-cell *matCellDef="let recepcion">{{ recepcion.documento103 }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
+        <td mat-cell *matCellDef="let recepcion">
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Editar recepción de ' + recepcion.horasRecepcionadas + ' horas'"
+            (click)="openEditDialog(recepcion)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+}

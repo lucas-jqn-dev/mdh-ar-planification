@@ -1,0 +1,150 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar recepción' : 'Nueva recepción' }}</h2>
+
+<mat-dialog-content>
+  @if (!confirmingDelete()) {
+    <form [formGroup]="form" class="recepcion-form" novalidate>
+      <mat-form-field appearance="outline" class="recepcion-field">
+        <mat-label>OC</mat-label>
+        <input
+          matInput
+          formControlName="oc"
+          [matAutocomplete]="ocAuto"
+          placeholder="Buscá por número de OC"
+          autocomplete="off"
+        />
+        <mat-autocomplete #ocAuto="matAutocomplete" [displayWith]="ocDisplayFn">
+          @for (option of filteredOcs(); track option.id) {
+            <mat-option [value]="option">{{ ocOptionLabel(option) }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (form.controls.oc.touched && form.controls.oc.hasError('required')) {
+          <mat-error>Seleccioná una OC</mat-error>
+        }
+        @if (form.controls.oc.touched && form.controls.oc.hasError(ocInvalidaError)) {
+          <mat-error>Elegí una OC de la lista</mat-error>
+        }
+        @if (!loadingOptions() && assignableOcs().length === 0) {
+          <mat-hint>No hay OC pendientes disponibles.</mat-hint>
+        }
+      </mat-form-field>
+
+      @if (selectedOc(); as oc) {
+        <div class="recepcion-derived">
+          <h3 class="recepcion-derived-title">Datos de la OC</h3>
+          <dl class="recepcion-derived-details">
+            <dt>OC</dt>
+            <dd>{{ oc.numeroOc || '—' }}</dd>
+            <dt>Posición</dt>
+            <dd>{{ oc.posicion }}</dd>
+            <dt>Consultor</dt>
+            <dd>{{ oc.consultor ? oc.consultor.nombre : '—' }}</dd>
+            <dt>Proveedor</dt>
+            <dd>{{ oc.consultor ? oc.consultor.proveedor : '—' }}</dd>
+            <dt>Tarifa hora</dt>
+            <dd>{{ oc.consultor?.perfilSap ? formatMonto(oc.consultor!.perfilSap!.tarifaHora) : '—' }}</dd>
+            <dt>Cant. de horas OC</dt>
+            <dd>{{ oc.cantidadHoras }}</dd>
+            <dt>ID PEP</dt>
+            <dd>{{ oc.pep ? oc.pep.pepId : '—' }}</dd>
+          </dl>
+        </div>
+      }
+
+      <mat-form-field appearance="outline" class="recepcion-field">
+        <mat-label>Mes a recepcionar</mat-label>
+        <mat-select formControlName="mes">
+          @for (option of mesOptions(); track option.value) {
+            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.mes.touched && form.controls.mes.hasError('required')) {
+          <mat-error>Seleccioná un mes</mat-error>
+        }
+        @if (selectedOc() && mesOptions().length === 0) {
+          <mat-hint>La OC seleccionada no tiene meses de validez.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="recepcion-field recepcion-field-half">
+        <mat-label>Horas a recepcionar</mat-label>
+        <input matInput type="number" min="0.01" step="0.01" formControlName="horasRecepcionadas" />
+        @if (form.controls.horasRecepcionadas.touched && form.controls.horasRecepcionadas.hasError('required')) {
+          <mat-error>Obligatorio</mat-error>
+        }
+        @if (form.controls.horasRecepcionadas.touched && form.controls.horasRecepcionadas.hasError('min')) {
+          <mat-error>Debe ser mayor a 0</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="recepcion-field recepcion-field-half">
+        <mat-label>Documento 103</mat-label>
+        <input matInput formControlName="documento103" autocomplete="off" />
+        @if (form.controls.documento103.touched && form.controls.documento103.hasError('required')) {
+          <mat-error>Obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="recepcion-error" role="alert">{{ errorMessage() }}</p>
+      }
+    </form>
+  } @else {
+    <p class="delete-confirm-text" role="alert">
+      ¿Eliminar esta recepción de <strong>{{ data.recepcion?.horasRecepcionadas }} hs</strong>
+      (Documento 103 <strong>{{ data.recepcion?.documento103 }}</strong>)? Esta acción no se puede deshacer.
+    </p>
+    @if (errorMessage()) {
+      <p class="recepcion-error" role="alert">{{ errorMessage() }}</p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="recepcion-actions">
+  @if (confirmingDelete()) {
+    <button mat-stroked-button type="button" (click)="cancelDeleteConfirmation()" [disabled]="deleting()">
+      Volver
+    </button>
+    <span class="recepcion-actions-spacer"></span>
+    <button
+      mat-flat-button
+      color="warn"
+      type="button"
+      class="recepcion-submit"
+      (click)="confirmDelete()"
+      [disabled]="deleting()"
+    >
+      @if (deleting()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>Confirmar eliminación</span>
+    </button>
+  } @else {
+    @if (isEditMode) {
+      <button
+        mat-button
+        color="warn"
+        type="button"
+        (click)="askDeleteConfirmation()"
+        [disabled]="saving()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar
+      </button>
+    }
+    <span class="recepcion-actions-spacer"></span>
+    <button mat-stroked-button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="recepcion-submit"
+      (click)="submit()"
+      [disabled]="form.invalid || saving()"
+    >
+      @if (saving()) {
+        <mat-spinner diameter="18" />
+      }
+      <span>{{ isEditMode ? 'Guardar cambios' : 'Crear' }}</span>
+    </button>
+  }
+</mat-dialog-actions>

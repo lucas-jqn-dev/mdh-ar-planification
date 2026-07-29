@@ -14,5 +14,6 @@ import { PepsModule } from '../peps/peps.module';
   ],
   controllers: [OcsController],
   providers: [OcsService],
+  exports: [MongooseModule],
 })
 export class OcsModule {}

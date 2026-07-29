@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MasterDataModule } from './master-data/master-data.module';
+import { RecepcionesModule } from './recepciones/recepciones.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { MasterDataModule } from './master-data/master-data.module';
     UsersModule,
     AuthModule,
     MasterDataModule,
+    RecepcionesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
