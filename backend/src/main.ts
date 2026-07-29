@@ -24,7 +24,30 @@ async function bootstrap() {
   // cambian de nombre, solo quedan montados bajo este prefijo.
   app.setGlobalPrefix('api');
 
-  app.use(helmet());
+  // Este proceso ahora sirve también el index.html de Angular (ver
+  // ServeStaticModule en app.module.ts), así que por primera vez la propia
+  // página carga con el header CSP de Helmet puesto (en dev, `ng serve`
+  // corre en otro proceso/puerto y nunca lo lleva). Helmet ya permite
+  // style-src/font-src desde cualquier https: por default, pero no define
+  // connect-src (cae al default-src 'self') — y el service worker de
+  // Angular reintenta el fetch de Google Fonts como una llamada fetch()
+  // propia, que sí cae bajo connect-src. Se agrega solo esa directiva,
+  // scopeada a los dos dominios de Google Fonts, sin tocar el resto de los
+  // defaults de Helmet.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'connect-src': [
+            "'self'",
+            'https://fonts.googleapis.com',
+            'https://fonts.gstatic.com',
+          ],
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: configService.get('corsOrigin', { infer: true }),
