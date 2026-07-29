@@ -69,6 +69,18 @@ export function deltaPresupuestoMensual(
   return resultado;
 }
 
+/**
+ * "YYYY-MM" -> nombre de mes en español (`Mes`) — usado por
+ * `RecepcionesService` para indexar `SaldoPep.realMensual` por el mes
+ * puntual de una Recepción (a diferencia de `mesesEnRango`, que expande un
+ * rango completo). Asume formato válido — se llama siempre después de
+ * `estaMesEnRango()`, que ya lo valida.
+ */
+export function mesNombre(mesAnio: string): Mes {
+  const mes = Number(mesAnio.slice(5, 7));
+  return MESES[mes - 1];
+}
+
 /** Usado por RecepcionesService para validar que el mes de una Recepción esté dentro de la validez de la OC. */
 export function estaMesEnRango(
   mes: string,

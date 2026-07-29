@@ -15,12 +15,12 @@ import {
 import { Oc, OcDocument } from './schemas/oc.schema';
 import { Mes, Pep, PepDocument } from '../peps/schemas/pep.schema';
 import { SaldoPep, SaldoPepDocument } from '../peps/schemas/saldo-pep.schema';
-import { defaultValidezAnioActual } from '../peps/saldo-pep.util';
+import { incrementarSaldoPepCampo } from '../peps/saldo-pep.util';
 import {
   Consultor,
   ConsultorDocument,
 } from '../consultores/schemas/consultor.schema';
-import type { PerfilSapDocument } from '../perfiles-sap/schemas/perfil-sap.schema';
+import { getTarifaHora } from '../consultores/consultor-tarifa.util';
 import {
   Recepcion,
   RecepcionDocument,
@@ -229,19 +229,13 @@ export class OcsService {
    * criterio que `totalPosicion()` en el frontend.
    */
   private async calcularPresupuestoMensualDto(dto: CreateOcDto) {
-    const tarifaHora = await this.getTarifaHora(dto.consultorId);
+    const tarifaHora = await getTarifaHora(
+      this.consultorModel,
+      dto.consultorId,
+    );
     const montoTotal = tarifaHora * dto.cantidadHoras;
 
     return calcularPresupuestoMensual(dto.mesDesde, dto.mesHasta, montoTotal);
-  }
-
-  private async getTarifaHora(consultorId: string): Promise<number> {
-    const consultor = await this.consultorModel
-      .findById(consultorId)
-      .populate<{ perfilSap: PerfilSapDocument | null }>('perfilSap')
-      .exec();
-
-    return consultor?.perfilSap?.tarifaHora ?? 0;
   }
 
   /**
@@ -278,51 +272,20 @@ export class OcsService {
   }
 
   /**
-   * Aplica un `$inc` atómico por mes contra `SaldoPep.asignacionMensual`
-   * del PEP indicado. Si ese PEP todavía no tiene `SaldoPep` (legacy, nunca
-   * editado desde que se creó `saldos_peps`), lo upsertea con la validez
-   * default del año en curso — mismo patrón que
-   * `PepsService.upsertSaldoForecast()`.
-   *
-   * `pepId` se reconstruye siempre con `new Types.ObjectId(pepId.toString())`
-   * antes de usarlo — un `Types.ObjectId` leído de un documento Mongoose
-   * (`existing.pep`/`deleted.pep`) no siempre pasa `instanceof
-   * Types.ObjectId` contra la clase importada acá (dual package hazard de
-   * `mongoose`/`bson` dentro de este monorepo con npm workspaces), y en ese
-   * caso Mongoose lo escribe tal cual en `$setOnInsert` — como un valor que
-   * NO calza con el `pep: ObjectId(...)` ya guardado en el `SaldoPep`
-   * original, el `upsert` no lo encuentra y crea un `SaldoPep` **duplicado**
-   * con `pep` como string. Reconstruir explícitamente el ObjectId a partir
-   * del string evita esto sin depender de que el objeto de entrada ya sea
-   * "suficientemente ObjectId".
+   * Mantiene `SaldoPep.asignacionMensual` del PEP indicado sincronizado —
+   * delega el upsert atómico por mes a `incrementarSaldoPepCampo()`
+   * (`master-data/peps/saldo-pep.util.ts`), compartido con
+   * `RecepcionesService` para `realMensual`.
    */
   private async incrementarAsignacionMensual(
     pepId: Types.ObjectId,
     deltasPorMes: Record<Mes, number>,
   ): Promise<void> {
-    const incFields: Record<string, number> = {};
-    for (const [mes, monto] of Object.entries(deltasPorMes)) {
-      if (monto) {
-        incFields[`asignacionMensual.${mes}`] = monto;
-      }
-    }
-
-    if (Object.keys(incFields).length === 0) {
-      return;
-    }
-
-    const pepObjectId = new Types.ObjectId(pepId.toString());
-    const { validezDesde, validezHasta } = defaultValidezAnioActual();
-
-    await this.saldoPepModel
-      .findOneAndUpdate(
-        { pep: pepObjectId },
-        {
-          $inc: incFields,
-          $setOnInsert: { pep: pepObjectId, validezDesde, validezHasta },
-        },
-        { upsert: true, setDefaultsOnInsert: true },
-      )
-      .exec();
+    await incrementarSaldoPepCampo(
+      this.saldoPepModel,
+      pepId,
+      'asignacionMensual',
+      deltasPorMes,
+    );
   }
 }
