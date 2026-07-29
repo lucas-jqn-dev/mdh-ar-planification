@@ -1,4 +1,4 @@
-.login-page {
+.signup-page {
   min-height: 100dvh;
   width: 100%;
   display: flex;
@@ -9,9 +9,9 @@
   background: var(--mat-sys-primary);
 }
 
-.login-card {
+.signup-card {
   width: 100%;
-  max-width: 26rem;
+  max-width: 28rem;
   padding: 2rem;
   box-sizing: border-box;
   display: flex;
@@ -19,7 +19,7 @@
   gap: 1.5rem;
 }
 
-.login-brand {
+.signup-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,34 +27,44 @@
   gap: 0.25rem;
 }
 
-.login-logo {
+.signup-logo {
   width: 5.5rem;
   height: auto;
   margin-bottom: 0.5rem;
 }
 
-.login-title {
+.signup-title {
   margin: 0;
   font: var(--mat-sys-headline-small);
 }
 
-.login-subtitle {
+.signup-subtitle {
   margin: 0;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-medium);
 }
 
-.login-form {
+.signup-form {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.login-field {
+.signup-field {
   width: 100%;
 }
 
-.login-error {
+.signup-row {
+  display: flex;
+  gap: 0.75rem;
+
+  .signup-field {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.signup-error {
   margin: 0 0 0.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
@@ -63,7 +73,7 @@
   font: var(--mat-sys-body-medium);
 }
 
-.login-submit {
+.signup-submit {
   height: 2.75rem;
   display: flex;
   align-items: center;
@@ -71,11 +81,11 @@
   gap: 0.5rem;
 }
 
-.login-spinner {
+.signup-spinner {
   display: inline-flex;
 }
 
-.login-signup-link {
+.signup-back-link {
   margin-top: 0.5rem;
   align-self: center;
   color: var(--mat-sys-primary);
@@ -88,8 +98,13 @@
 }
 
 @media (max-width: 420px) {
-  .login-card {
+  .signup-card {
     padding: 1.5rem;
     box-shadow: none;
+  }
+
+  .signup-row {
+    flex-direction: column;
+    gap: 0;
   }
 }

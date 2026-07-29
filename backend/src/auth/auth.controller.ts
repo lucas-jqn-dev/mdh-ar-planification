@@ -19,6 +19,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { UserDocument } from '../users/schemas/user.schema';
 import { AuthService, AuthContext, TokenPair } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CsrfGuard } from './guards/csrf.guard';
 import { CSRF_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth.constants';
@@ -44,6 +45,23 @@ export class AuthController {
     const { tokens, user } = await this.authService.login(
       dto.identifier,
       dto.password,
+      this.context(req),
+    );
+    this.setAuthCookies(res, tokens);
+    return { accessToken: tokens.accessToken, user };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.CREATED)
+  @Post('register')
+  async register(
+    @Body() dto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { tokens, user } = await this.authService.register(
+      dto,
       this.context(req),
     );
     this.setAuthCookies(res, tokens);

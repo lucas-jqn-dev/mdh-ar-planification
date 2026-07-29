@@ -7,6 +7,7 @@ import { AppConfig } from '../config/configuration';
 import { UsersService } from '../users/users.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { RegisterDto } from './dto/register.dto';
 
 const REFRESH_HASH_ROUNDS = 12;
 const GENERIC_INVALID_CREDENTIALS_MESSAGE = 'Usuario o contraseña incorrectos';
@@ -88,6 +89,37 @@ export class AuthService {
 
     const tokens = await this.issueTokenPair(user);
     this.logger.log({ event: 'login_success', userId: user.id, ...context });
+
+    return { tokens, user: this.sanitize(user) };
+  }
+
+  async register(
+    dto: RegisterDto,
+    context: AuthContext,
+  ): Promise<{ tokens: TokenPair; user: SanitizedUser }> {
+    const signupCode = this.configService.get('signupCode', { infer: true });
+
+    // Comparación exacta contra el valor de .env: vacío/no configurado nunca
+    // matchea, así que sin SIGNUP_CODE definido el alta queda deshabilitada.
+    if (!signupCode || dto.signupCode !== signupCode) {
+      this.logger.warn({
+        event: 'register_blocked',
+        reason: 'invalid_signup_code',
+        ...context,
+      });
+      throw new UnauthorizedException('Código de alta inválido');
+    }
+
+    const user = await this.usersService.create({
+      username: dto.username,
+      email: dto.email,
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+    });
+
+    const tokens = await this.issueTokenPair(user);
+    this.logger.log({ event: 'register_success', userId: user.id, ...context });
 
     return { tokens, user: this.sanitize(user) };
   }

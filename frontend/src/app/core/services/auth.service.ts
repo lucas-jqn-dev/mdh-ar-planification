@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginRequest } from '../../models/auth.model';
+import { AuthResponse, LoginRequest, RegisterRequest } from '../../models/auth.model';
 import { TokenStore } from './token-store';
 import { getCookie } from '../utils/cookie.util';
 import { SKIP_AUTH_REFRESH } from '../interceptors/refresh.interceptor';
@@ -21,6 +21,12 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/login`, credentials, { withCredentials: true })
+      .pipe(tap((response) => this.tokenStore.setSession(response.accessToken, response.user)));
+  }
+
+  register(payload: RegisterRequest): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, payload, { withCredentials: true })
       .pipe(tap((response) => this.tokenStore.setSession(response.accessToken, response.user)));
   }
 

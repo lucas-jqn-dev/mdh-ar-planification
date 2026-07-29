@@ -1,0 +1,124 @@
+<main class="signup-page" color="primary">
+  <mat-card class="signup-card" role="main" aria-labelledby="signup-title">
+    <div class="signup-brand">
+      <img class="signup-logo" src="images/logo-easy.png" alt="Easy Cencosud" />
+      <h1 id="signup-title" class="signup-title">MDH AR • Planificador Presupuestos</h1>
+      <p class="signup-subtitle">Creá tu cuenta para continuar</p>
+    </div>
+
+    <form class="signup-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-form-field appearance="outline" class="signup-field">
+        <mat-label>Usuario</mat-label>
+        <input
+          #usernameInput
+          matInput
+          type="text"
+          formControlName="username"
+          autocomplete="username"
+          aria-required="true"
+        />
+        @if (form.controls.username.touched && form.controls.username.hasError('required')) {
+          <mat-error>El usuario es obligatorio</mat-error>
+        }
+        @if (form.controls.username.touched && form.controls.username.hasError('minlength')) {
+          <mat-error>Ingresá al menos 3 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="signup-field">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          aria-required="true"
+        />
+        @if (form.controls.email.touched && form.controls.email.hasError('required')) {
+          <mat-error>El email es obligatorio</mat-error>
+        }
+        @if (form.controls.email.touched && form.controls.email.hasError('email')) {
+          <mat-error>Ingresá un email válido</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="signup-row">
+        <mat-form-field appearance="outline" class="signup-field">
+          <mat-label>Nombre</mat-label>
+          <input matInput type="text" formControlName="firstName" autocomplete="given-name" aria-required="true" />
+          @if (form.controls.firstName.touched && form.controls.firstName.hasError('required')) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="signup-field">
+          <mat-label>Apellido</mat-label>
+          <input matInput type="text" formControlName="lastName" autocomplete="family-name" aria-required="true" />
+          @if (form.controls.lastName.touched && form.controls.lastName.hasError('required')) {
+            <mat-error>Obligatorio</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="signup-field">
+        <mat-label>Contraseña</mat-label>
+        <input
+          matInput
+          [type]="hidePassword() ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="new-password"
+          aria-required="true"
+        />
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          [attr.aria-label]="hidePassword() ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+          [attr.aria-pressed]="!hidePassword()"
+          (click)="toggleHidePassword($event)"
+        >
+          <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+          <mat-error>La contraseña es obligatoria</mat-error>
+        }
+        @if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
+          <mat-error>Debe tener al menos 8 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="signup-field">
+        <mat-label>Código de alta</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="signupCode"
+          autocomplete="off"
+          aria-required="true"
+        />
+        @if (form.controls.signupCode.touched && form.controls.signupCode.hasError('required')) {
+          <mat-error>El código de alta es obligatorio</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="signup-error" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        class="signup-submit"
+        [disabled]="form.invalid || loading()"
+      >
+        @if (loading()) {
+          <mat-spinner diameter="20" class="signup-spinner" aria-hidden="true" />
+        }
+        <span>{{ loading() ? 'Creando cuenta…' : 'Crear cuenta' }}</span>
+      </button>
+
+      <a class="signup-back-link" routerLink="/login">¿Ya tenés cuenta? Iniciá sesión</a>
+    </form>
+  </mat-card>
+</main>

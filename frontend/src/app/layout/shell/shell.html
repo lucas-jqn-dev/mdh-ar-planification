@@ -8,6 +8,10 @@
     (transitionend)="onSidenavTransitionEnd($event)"
   >
     <mat-nav-list>
+      <span >
+        <img class="shell-logo" src="images/logo-easy.png" alt="Easy Cencosud" />
+      </span>
+
       @for (item of navItems; track item.path) {
         <a
           mat-list-item

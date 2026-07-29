@@ -9,6 +9,7 @@ export interface AppConfig {
     refreshExpiresIn: string;
   };
   corsOrigin: string;
+  signupCode: string;
   rateLimit: {
     ttl: number;
     max: number;
@@ -39,6 +40,10 @@ export default (): AppConfig => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
   },
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:4200',
+  // Código requerido en el formulario de alta de usuario (frontend
+  // "Crear cuenta"). Sin valor en .env, AuthService.register rechaza
+  // cualquier alta (vacío nunca matchea, ver bullet de configuración).
+  signupCode: process.env.SIGNUP_CODE ?? '',
   rateLimit: {
     ttl: parseInt(process.env.RATE_LIMIT_TTL ?? '60', 10),
     max: parseInt(process.env.RATE_LIMIT_MAX ?? '100', 10),

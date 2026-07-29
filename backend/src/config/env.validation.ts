@@ -15,6 +15,11 @@ export const envValidationSchema = Joi.object({
 
   CORS_ORIGIN: Joi.string().default('http://localhost:4200'),
 
+  // Código requerido para crear un usuario desde /signup. Si no se define,
+  // el alta pública queda deshabilitada (AuthService.register siempre
+  // rechaza una comparación contra '').
+  SIGNUP_CODE: Joi.string().optional(),
+
   RATE_LIMIT_TTL: Joi.number().default(60),
   RATE_LIMIT_MAX: Joi.number().default(100),
   AUTH_RATE_LIMIT_TTL: Joi.number().default(60),
