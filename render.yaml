@@ -1,0 +1,26 @@
+services:
+  - name: mdh-ar-planificador
+    type: web
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Connection string de MongoDB Atlas (Database > Connect > Drivers).
+      - key: MONGODB_URI
+        sync: false
+      # Generados automáticamente por Render, uno independiente del otro.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # URL pública de este mismo servicio una vez creado (ej.
+      # https://mdh-ar-planificador.onrender.com). En este deploy de un solo
+      # servicio el navegador nunca hace una request cross-origin real, así
+      # que este valor casi no se ejercita — se pide igual para no dejar
+      # el default de desarrollo (localhost:4200) activo en producción.
+      - key: CORS_ORIGIN
+        sync: false

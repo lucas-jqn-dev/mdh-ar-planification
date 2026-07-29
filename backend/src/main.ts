@@ -18,6 +18,12 @@ async function bootstrap() {
   const isProduction =
     configService.get('nodeEnv', { infer: true }) === 'production';
 
+  // El frontend (en producción, servido desde este mismo proceso vía
+  // ServeStaticModule) espera la API bajo "/api" (ver `environment.ts`).
+  // Los endpoints reales (`/auth/...`, `/master-data/...`, etc.) no
+  // cambian de nombre, solo quedan montados bajo este prefijo.
+  app.setGlobalPrefix('api');
+
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({

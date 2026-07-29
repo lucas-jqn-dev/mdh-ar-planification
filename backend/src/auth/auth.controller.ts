@@ -103,7 +103,10 @@ export class AuthController {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
-      path: '/auth',
+      // "/api/auth", no "/auth": el global prefix ("api", ver main.ts) hace
+      // que el endpoint real sea /api/auth/refresh — el path de la cookie
+      // tiene que calzar con eso o el browser no la manda en esa request.
+      path: '/api/auth',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -117,7 +120,7 @@ export class AuthController {
   }
 
   private clearAuthCookies(res: Response): void {
-    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/auth' });
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/api/auth' });
     res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
   }
 }
