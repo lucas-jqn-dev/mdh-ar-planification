@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Pep, sumPresupuestoMensual } from '../../../models/pep.model';
@@ -14,20 +15,41 @@ import { PepDialogResult, PepFormDialog, PepFormDialogData } from './pep-form-di
 
 const LOAD_ERROR_MESSAGE = 'No pudimos cargar los PEPs. Intenta nuevamente.';
 const SNACKBAR_DURATION_MS = 4000;
+const ASIGNADO_HINT = 'Sumatoria de todas las OC en este período';
+const CONSUMIDO_REAL_HINT = 'Sumatoria de todas las recepciones del período';
 
 function sortPeps(items: Pep[]): Pep[] {
   return [...items].sort((a, b) => a.pepId.localeCompare(b.pepId));
 }
 
-/** `presupuestoTotal` ya no viene del backend (vivía en `Pep`, ahora `forecastMensual` vive en `SaldoPep`) — se suma acá, `0` si el PEP todavía no tiene saldo. */
-function presupuestoTotal(pep: Pep): number {
+/**
+ * Los tres totales anuales de `SaldoPep` (ya no viven en `Pep`, ver
+ * `saldos_peps`) — se suman acá con `sumPresupuestoMensual()`, `0` si el
+ * PEP todavía no tiene saldo.
+ */
+function forecastAnual(pep: Pep): number {
   return pep.saldoActual ? sumPresupuestoMensual(pep.saldoActual.forecastMensual) : 0;
+}
+
+function asignadoTotal(pep: Pep): number {
+  return pep.saldoActual ? sumPresupuestoMensual(pep.saldoActual.asignacionMensual) : 0;
+}
+
+function consumidoRealTotal(pep: Pep): number {
+  return pep.saldoActual ? sumPresupuestoMensual(pep.saldoActual.realMensual) : 0;
 }
 
 @Component({
   selector: 'app-peps-panel',
   standalone: true,
-  imports: [MatTableModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [
+    MatTableModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+  ],
   templateUrl: './peps-panel.html',
   styleUrl: './peps-panel.scss',
 })
@@ -38,8 +60,20 @@ export class PepsPanel {
 
   readonly isHandset = injectIsHandset();
   readonly formatMonto = formatMonto;
-  readonly presupuestoTotal = presupuestoTotal;
-  readonly displayedColumns = ['pepId', 'descripcion', 'pais', 'presupuestoTotal', 'acciones'];
+  readonly forecastAnual = forecastAnual;
+  readonly asignadoTotal = asignadoTotal;
+  readonly consumidoRealTotal = consumidoRealTotal;
+  readonly asignadoHint = ASIGNADO_HINT;
+  readonly consumidoRealHint = CONSUMIDO_REAL_HINT;
+  readonly displayedColumns = [
+    'pepId',
+    'descripcion',
+    'pais',
+    'forecastAnual',
+    'asignado',
+    'consumidoReal',    
+    'acciones',
+  ];
 
   readonly peps = signal<Pep[]>([]);
   readonly loading = signal(true);

@@ -55,67 +55,50 @@
   </div>
 } @else {
   <div class="panel-table-wrapper">
-    <table mat-table [dataSource]="recepciones()" class="panel-table">
-      <ng-container matColumnDef="solped">
-        <th mat-header-cell *matHeaderCellDef>SolPed</th>
-        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.solped || '—' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="posicion">
-        <th mat-header-cell *matHeaderCellDef>Posición</th>
-        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.posicion ?? '—' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="numeroOc">
-        <th mat-header-cell *matHeaderCellDef>Número OC</th>
-        <td mat-cell *matCellDef="let recepcion">{{ recepcion.oc?.numeroOc || '—' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="consultor">
-        <th mat-header-cell *matHeaderCellDef>Consultor</th>
-        <td mat-cell *matCellDef="let recepcion">
-          {{ recepcion.oc?.consultor ? recepcion.oc!.consultor!.nombre : '—' }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="pep">
-        <th mat-header-cell *matHeaderCellDef>PEP</th>
-        <td mat-cell *matCellDef="let recepcion">
-          {{ recepcion.oc?.pep ? recepcion.oc!.pep!.pepId : '—' }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="mes">
-        <th mat-header-cell *matHeaderCellDef>Mes recepcionado</th>
-        <td mat-cell *matCellDef="let recepcion">{{ formatMesAnio(recepcion.mes) }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="horas">
-        <th mat-header-cell *matHeaderCellDef>Horas recepcionadas</th>
-        <td mat-cell *matCellDef="let recepcion">{{ recepcion.horasRecepcionadas }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="documento103">
-        <th mat-header-cell *matHeaderCellDef>Documento 103</th>
-        <td mat-cell *matCellDef="let recepcion">{{ recepcion.documento103 }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="acciones">
-        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
-        <td mat-cell *matCellDef="let recepcion">
-          <button
-            mat-icon-button
-            type="button"
-            [attr.aria-label]="'Editar recepción de ' + recepcion.horasRecepcionadas + ' horas'"
-            (click)="openEditDialog(recepcion)"
-          >
-            <mat-icon>edit</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    <table class="panel-table recepcion-table">
+      <thead>
+        <tr>
+          <th>SolPed</th>
+          <th>Posición</th>
+          <th>Número OC</th>
+          <th>Consultor</th>
+          <th>PEP</th>
+          <th>Mes recepcionado</th>
+          <th>Horas recepcionadas</th>
+          <th>Documento 103</th>
+          <th aria-label="Acciones"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.label : row.id) {
+          @if (isGroupRow(row)) {
+            <tr class="recepcion-group-row">
+              <td [attr.colspan]="columnCount">{{ row.label }}</td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ row.oc?.solped || '—' }}</td>
+              <td>{{ row.oc?.posicion ?? '—' }}</td>
+              <td>{{ row.oc?.numeroOc || '—' }}</td>
+              <td>{{ row.oc?.consultor ? row.oc!.consultor!.nombre : '—' }}</td>
+              <td>{{ row.oc?.pep ? row.oc!.pep!.pepId : '—' }}</td>
+              <td>{{ formatMesAnio(row.mes) }}</td>
+              <td>{{ row.horasRecepcionadas }}</td>
+              <td>{{ row.documento103 }}</td>
+              <td class="recepcion-table-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Editar recepción de ' + row.horasRecepcionadas + ' horas'"
+                  (click)="openEditDialog(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
     </table>
   </div>
 }

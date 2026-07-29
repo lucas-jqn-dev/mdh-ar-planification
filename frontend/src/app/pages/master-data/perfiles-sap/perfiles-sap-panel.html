@@ -44,43 +44,42 @@
   </div>
 } @else {
   <div class="panel-table-wrapper">
-    <table mat-table [dataSource]="perfilesSap()" class="panel-table">
-      <ng-container matColumnDef="codigoSap">
-        <th mat-header-cell *matHeaderCellDef>Código SAP</th>
-        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.codigoSap }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="descripcion">
-        <th mat-header-cell *matHeaderCellDef>Descripción</th>
-        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.descripcion }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="tarifaHora">
-        <th mat-header-cell *matHeaderCellDef>Tarifa hora</th>
-        <td mat-cell *matCellDef="let perfilSap">{{ formatMonto(perfilSap.tarifaHora) }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="proveedor">
-        <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-        <td mat-cell *matCellDef="let perfilSap">{{ perfilSap.proveedor }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="acciones">
-        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
-        <td mat-cell *matCellDef="let perfilSap">
-          <button
-            mat-icon-button
-            type="button"
-            [attr.aria-label]="'Editar ' + perfilSap.codigoSap"
-            (click)="openEditDialog(perfilSap)"
-          >
-            <mat-icon>edit</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    <table class="panel-table perfil-sap-table">
+      <thead>
+        <tr>
+          <th>Código SAP</th>
+          <th>Descripción</th>
+          <th>Tarifa hora</th>
+          <th>Proveedor</th>
+          <th aria-label="Acciones"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.label : row.id) {
+          @if (isGroupRow(row)) {
+            <tr class="perfil-sap-group-row">
+              <td [attr.colspan]="columnCount">{{ row.label }}</td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ row.codigoSap }}</td>
+              <td>{{ row.descripcion }}</td>
+              <td>{{ formatMonto(row.tarifaHora) }}</td>
+              <td>{{ row.proveedor }}</td>
+              <td class="perfil-sap-table-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Editar ' + row.codigoSap"
+                  (click)="openEditDialog(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
     </table>
   </div>
 }

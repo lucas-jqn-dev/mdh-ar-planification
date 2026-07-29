@@ -22,6 +22,35 @@
   width: 100%;
 }
 
+.perfil-sap-table {
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.perfil-sap-table th,
+.perfil-sap-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+.perfil-sap-table th {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-title-small);
+}
+
+.perfil-sap-group-row td {
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-title-small);
+}
+
+.perfil-sap-table-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
 .perfil-sap-cards {
   display: flex;
   flex-direction: column;

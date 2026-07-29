@@ -49,50 +49,44 @@
   </div>
 } @else {
   <div class="panel-table-wrapper">
-    <table mat-table [dataSource]="consultores()" class="panel-table">
-      <ng-container matColumnDef="proveedor">
-        <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-        <td mat-cell *matCellDef="let consultor">{{ consultor.proveedor }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="nombre">
-        <th mat-header-cell *matHeaderCellDef>Nombre</th>
-        <td mat-cell *matCellDef="let consultor">{{ consultor.nombre }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="equipo">
-        <th mat-header-cell *matHeaderCellDef>Equipo</th>
-        <td mat-cell *matCellDef="let consultor">{{ consultor.equipo }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="responsable">
-        <th mat-header-cell *matHeaderCellDef>Responsable</th>
-        <td mat-cell *matCellDef="let consultor">{{ consultor.responsable }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="perfilSap">
-        <th mat-header-cell *matHeaderCellDef>Perfil SAP</th>
-        <td mat-cell *matCellDef="let consultor">
-          {{ consultor.perfilSap ? consultor.perfilSap.codigoSap + ' — ' + consultor.perfilSap.descripcion : '—' }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="acciones">
-        <th mat-header-cell *matHeaderCellDef aria-label="Acciones"></th>
-        <td mat-cell *matCellDef="let consultor">
-          <button
-            mat-icon-button
-            type="button"
-            [attr.aria-label]="'Editar ' + consultor.nombre"
-            (click)="openEditDialog(consultor)"
-          >
-            <mat-icon>edit</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    <table class="panel-table consultor-table">
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th>Nombre</th>
+          <th>Equipo</th>
+          <th>Responsable</th>
+          <th>Perfil SAP</th>
+          <th aria-label="Acciones"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of displayRows(); track isGroupRow(row) ? 'group-' + row.label : row.id) {
+          @if (isGroupRow(row)) {
+            <tr class="consultor-group-row">
+              <td [attr.colspan]="columnCount">{{ row.label }}</td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ row.proveedor }}</td>
+              <td>{{ row.nombre }}</td>
+              <td>{{ row.equipo }}</td>
+              <td>{{ row.responsable }}</td>
+              <td>{{ row.perfilSap ? row.perfilSap.codigoSap + ' — ' + row.perfilSap.descripcion : '—' }}</td>
+              <td class="consultor-table-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Editar ' + row.nombre"
+                  (click)="openEditDialog(row)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
     </table>
   </div>
 }

@@ -1,5 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,16 +18,38 @@ import {
 const LOAD_ERROR_MESSAGE = 'No pudimos cargar las recepciones. Intenta nuevamente.';
 const SNACKBAR_DURATION_MS = 4000;
 
+/** Fila separadora de grupo (una por Mes recepcionado distinto) — mismo patrón que OcGroupRow en ocs-panel.ts. */
+export interface RecepcionGroupRow {
+  kind: 'group';
+  label: string;
+}
+
+export type RecepcionDisplayRow = RecepcionGroupRow | Recepcion;
+
+export function isGroupRow(row: RecepcionDisplayRow): row is RecepcionGroupRow {
+  return (row as RecepcionGroupRow).kind === 'group';
+}
+
+/**
+ * Orden cronológico por `mes` ("YYYY-MM", comparable como string) y, dentro
+ * del mismo mes, por SolPed+Posición de la OC asociada — mismo desempate
+ * que usa `compareOcs()` en ocs-panel.ts. `oc` puede ser `null` (OC
+ * eliminada luego de crear la recepción, sin integridad referencial), en
+ * cuyo caso el desempate cae al final.
+ */
+function sortRecepciones(items: Recepcion[]): Recepcion[] {
+  return [...items].sort(
+    (a, b) =>
+      a.mes.localeCompare(b.mes) ||
+      (a.oc?.solped ?? '').localeCompare(b.oc?.solped ?? '') ||
+      (a.oc?.posicion ?? 0) - (b.oc?.posicion ?? 0),
+  );
+}
+
 @Component({
   selector: 'app-order-recepcions',
   standalone: true,
-  imports: [
-    MatTableModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-  ],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './order-recepcions.html',
   styleUrl: './order-recepcions.scss',
 })
@@ -39,21 +60,32 @@ export class OrderRecepcions {
 
   readonly isHandset = injectIsHandset();
   readonly formatMesAnio = formatMesAnio;
-  readonly displayedColumns = [
-    'solped',
-    'posicion',
-    'numeroOc',
-    'consultor',
-    'pep',
-    'mes',
-    'horas',
-    'documento103',
-    'acciones',
-  ];
+  readonly isGroupRow = isGroupRow;
+  readonly columnCount = 9;
 
   readonly recepciones = signal<Recepcion[]>([]);
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
+
+  /**
+   * Filas a renderizar en la tabla desktop: siempre agrupadas por Mes
+   * recepcionado (la lista ya viene ordenada por ese campo), una fila
+   * separadora por cada valor distinto — mismo patrón que `displayRows` en
+   * ocs-panel.ts.
+   */
+  readonly displayRows = computed<RecepcionDisplayRow[]>(() => {
+    const items = this.recepciones();
+    const rows: RecepcionDisplayRow[] = [];
+    let lastValue: string | null = null;
+    for (const recepcion of items) {
+      if (recepcion.mes !== lastValue) {
+        rows.push({ kind: 'group', label: `Mes recepcionado ${formatMesAnio(recepcion.mes)}` });
+        lastValue = recepcion.mes;
+      }
+      rows.push(recepcion);
+    }
+    return rows;
+  });
 
   constructor() {
     this.loadRecepciones();
@@ -88,12 +120,14 @@ export class OrderRecepcions {
   private applyDialogResult(result: RecepcionDialogResult): void {
     switch (result.action) {
       case 'created':
-        this.recepciones.update((items) => [result.recepcion, ...items]);
+        this.recepciones.update((items) => sortRecepciones([result.recepcion, ...items]));
         this.snackBar.open('Recepción creada', 'Cerrar', { duration: SNACKBAR_DURATION_MS });
         break;
       case 'updated':
         this.recepciones.update((items) =>
-          items.map((item) => (item.id === result.recepcion.id ? result.recepcion : item)),
+          sortRecepciones(
+            items.map((item) => (item.id === result.recepcion.id ? result.recepcion : item)),
+          ),
         );
         this.snackBar.open('Recepción actualizada', 'Cerrar', { duration: SNACKBAR_DURATION_MS });
         break;
@@ -110,7 +144,7 @@ export class OrderRecepcions {
 
     this.recepcionesService.list().subscribe({
       next: (recepciones) => {
-        this.recepciones.set(recepciones);
+        this.recepciones.set(sortRecepciones(recepciones));
         this.loading.set(false);
       },
       error: () => {

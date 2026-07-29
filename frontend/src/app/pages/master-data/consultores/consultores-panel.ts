@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,16 +17,28 @@ import {
 const LOAD_ERROR_MESSAGE = 'No pudimos cargar los consultores. Intenta nuevamente.';
 const SNACKBAR_DURATION_MS = 4000;
 
+/** Fila separadora de grupo (una por Responsable distinto) — mismo patrón que OcGroupRow en ocs-panel.ts. */
+export interface ConsultorGroupRow {
+  kind: 'group';
+  label: string;
+}
+
+export type ConsultorDisplayRow = ConsultorGroupRow | Consultor;
+
+export function isGroupRow(row: ConsultorDisplayRow): row is ConsultorGroupRow {
+  return (row as ConsultorGroupRow).kind === 'group';
+}
+
 function sortConsultores(items: Consultor[]): Consultor[] {
   return [...items].sort(
-    (a, b) => a.proveedor.localeCompare(b.proveedor) || a.nombre.localeCompare(b.nombre),
+    (a, b) => a.responsable.localeCompare(b.responsable) || a.nombre.localeCompare(b.nombre),
   );
 }
 
 @Component({
   selector: 'app-consultores-panel',
   standalone: true,
-  imports: [MatTableModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './consultores-panel.html',
   styleUrl: './consultores-panel.scss',
 })
@@ -37,7 +48,8 @@ export class ConsultoresPanel {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly isHandset = injectIsHandset();
-  readonly displayedColumns = ['proveedor', 'nombre', 'equipo', 'responsable', 'perfilSap', 'acciones'];
+  readonly isGroupRow = isGroupRow;
+  readonly columnCount = 6;
 
   readonly consultores = signal<Consultor[]>([]);
   readonly loading = signal(true);
@@ -50,6 +62,26 @@ export class ConsultoresPanel {
     }
     const count = this.consultores().length;
     return `${count} registrado${count === 1 ? '' : 's'}`;
+  });
+
+  /**
+   * Filas a renderizar en la tabla desktop: siempre agrupadas por
+   * Responsable (la lista ya viene ordenada por ese campo), una fila
+   * separadora por cada valor distinto — mismo patrón que `displayRows` en
+   * ocs-panel.ts.
+   */
+  readonly displayRows = computed<ConsultorDisplayRow[]>(() => {
+    const items = this.consultores();
+    const rows: ConsultorDisplayRow[] = [];
+    let lastValue: string | null = null;
+    for (const consultor of items) {
+      if (consultor.responsable !== lastValue) {
+        rows.push({ kind: 'group', label: `Responsable ${consultor.responsable}` });
+        lastValue = consultor.responsable;
+      }
+      rows.push(consultor);
+    }
+    return rows;
   });
 
   constructor() {
