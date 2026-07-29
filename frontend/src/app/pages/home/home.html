@@ -1,1 +1,172 @@
-<h1>Home</h1>
+<h1>Dasboard Presupuestos</h1>
+
+<mat-tab-group class="dashboard-tabs" animationDuration="0ms">
+  <mat-tab label="PEPS">
+    <div class="tab-content">
+      @if (loading()) {
+        <div class="panel-state">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (errorMessage()) {
+        <div class="panel-state" role="alert">
+          <p>{{ errorMessage() }}</p>
+        </div>
+      } @else if (peps().length === 0) {
+        <div class="panel-state">
+          <p>Todavía no hay PEPs cargados.</p>
+        </div>
+      } @else {
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Forecast vs Asignado vs Real por PEP</h2>
+            <mat-form-field appearance="outline" class="chart-filter" subscriptSizing="dynamic">
+              <mat-label>Período</mat-label>
+              <mat-select [ngModel]="filtro()" (ngModelChange)="filtro.set($event)">
+                @for (option of filtroOptions; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="chart-container">
+            <ngx-charts-bar-vertical-2d
+              [results]="comparativaData()"
+              [scheme]="scheme"
+              [legend]="true"
+              [legendPosition]="legendPosition()"
+              [xAxis]="true"
+              [yAxis]="true"
+              [showXAxisLabel]="true"
+              [showYAxisLabel]="true"
+              xAxisLabel="PEP"
+              [yAxisLabel]="yAxisLabel()"
+              [roundDomains]="true"
+              [roundEdges]="false"
+              [yAxisTickFormatting]="formatMonto"
+            />
+          </div>
+        </mat-card>
+
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Movimientos del PEP</h2>
+            <mat-form-field appearance="outline" class="chart-filter" subscriptSizing="dynamic">
+              <mat-label>PEP</mat-label>
+              <mat-select [ngModel]="effectivePepId()" (ngModelChange)="selectedPepId.set($event)">
+                @for (option of peps(); track option.id) {
+                  <mat-option [value]="option.id">{{ pepLabel(option) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="chart-container">
+            <ngx-charts-line-chart
+              [results]="movimientosPorMesData()"
+              [scheme]="scheme"
+              [legend]="true"
+              [legendPosition]="legendPosition()"
+              [xAxis]="true"
+              [yAxis]="true"
+              [showXAxisLabel]="true"
+              [showYAxisLabel]="true"
+              xAxisLabel="Mes"
+              yAxisLabel="Monto"
+              [roundDomains]="true"
+              [yAxisTickFormatting]="formatMonto"
+            />
+          </div>
+        </mat-card>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab label="OC">
+    <div class="tab-content">
+      @if (ocsLoading()) {
+        <div class="panel-state">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (ocsErrorMessage()) {
+        <div class="panel-state" role="alert">
+          <p>{{ ocsErrorMessage() }}</p>
+        </div>
+      } @else if (montoPorProveedorData().length === 0) {
+        <div class="panel-state">
+          <p>Todavía no hay OC cargadas.</p>
+        </div>
+      } @else {
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Monto Real por Proveedor</h2>
+          </div>
+
+          <div class="chart-container chart-container-pie">
+            <ngx-charts-pie-chart
+              [results]="montoPorProveedorData()"
+              [scheme]="pieScheme"
+              [doughnut]="true"
+              [legend]="true"
+              [legendPosition]="legendPosition()"
+              [labels]="true"
+            />
+          </div>
+        </mat-card>
+      }
+    </div>
+  </mat-tab>
+
+  <mat-tab label="CONSULTORES">
+    <div class="tab-content">
+      @if (recepcionesLoading()) {
+        <div class="panel-state">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (recepcionesErrorMessage()) {
+        <div class="panel-state" role="alert">
+          <p>{{ recepcionesErrorMessage() }}</p>
+        </div>
+      } @else if (recepciones().length === 0) {
+        <div class="panel-state">
+          <p>Todavía no hay recepciones cargadas.</p>
+        </div>
+      } @else {
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Horas Recepcionadas por Consultor</h2>
+            <mat-form-field appearance="outline" class="chart-filter" subscriptSizing="dynamic">
+              <mat-label>Período</mat-label>
+              <mat-select [ngModel]="consultorFiltro()" (ngModelChange)="consultorFiltro.set($event)">
+                @for (option of filtroOptions; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          @if (horasPorConsultorData().length === 0) {
+            <p class="chart-empty-hint">No hay recepciones en el período seleccionado.</p>
+          }
+
+          <div class="chart-container">
+            <ngx-charts-bar-vertical
+              [results]="horasPorConsultorData()"
+              [scheme]="consultorScheme"
+              [legend]="false"
+              [xAxis]="true"
+              [yAxis]="true"
+              [showXAxisLabel]="true"
+              [showYAxisLabel]="true"
+              xAxisLabel="Consultor"
+              yAxisLabel="Horas recepcionadas"
+              [roundDomains]="true"
+              [roundEdges]="false"
+              [yAxisTickFormatting]="formatMonto"
+            />
+          </div>
+        </mat-card>
+      }
+    </div>
+  </mat-tab>
+</mat-tab-group>
