@@ -80,6 +80,18 @@
   font: var(--mat-sys-title-small);
 }
 
+/* Sin Número OC todavía (esperando liberación) — leve azul. Si además le
+   quedan 0 horas disponibles sin completar, gana el amarillo de abajo
+   (declarado después, mismo nivel de especificidad). */
+.oc-row-sin-numero td {
+  background: #e3f0fd;
+}
+
+/* 0 horas disponibles y todavía no marcada como Completada — leve amarillo. */
+.oc-row-horas-agotadas td {
+  background: #fdf3d0;
+}
+
 .oc-table-actions {
   display: flex;
   gap: 0.25rem;

@@ -87,6 +87,16 @@ function horasDisponibles(oc: Oc): number {
   return oc.cantidadHoras - oc.horasConsumidas;
 }
 
+/** Resalta filas todavía sin Número OC (esperando que Compras/gerencia lo cargue). */
+function sinNumeroOc(oc: Oc): boolean {
+  return !oc.numeroOc;
+}
+
+/** Resalta filas sin horas disponibles que siguen sin marcarse como Completada. */
+function horasAgotadasSinCompletar(oc: Oc): boolean {
+  return !oc.completada && horasDisponibles(oc) === 0;
+}
+
 @Component({
   selector: 'app-ocs-panel',
   standalone: true,
@@ -114,6 +124,8 @@ export class OcsPanel {
   readonly formatMesAnio = formatMesAnio;
   readonly totalPosicion = totalPosicion;
   readonly horasDisponibles = horasDisponibles;
+  readonly sinNumeroOc = sinNumeroOc;
+  readonly horasAgotadasSinCompletar = horasAgotadasSinCompletar;
   readonly isGroupRow = isGroupRow;
   readonly sortOptions = SORT_OPTIONS;
   readonly columnCount = 15;

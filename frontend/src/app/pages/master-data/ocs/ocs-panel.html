@@ -132,7 +132,10 @@
               <td [attr.colspan]="columnCount">{{ row.label }}</td>
             </tr>
           } @else {
-            <tr>
+            <tr
+              [class.oc-row-sin-numero]="sinNumeroOc(row)"
+              [class.oc-row-horas-agotadas]="horasAgotadasSinCompletar(row)"
+            >
               <td>{{ row.solped }}</td>
               <td>{{ row.posicion }}</td>
               <td>{{ row.numeroOc || '—' }}</td>
