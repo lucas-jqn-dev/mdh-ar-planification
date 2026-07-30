@@ -17,13 +17,17 @@
         <mat-radio-button [value]="option.value">{{ option.label }}</mat-radio-button>
       }
     </mat-radio-group>
-    <mat-checkbox
-      class="oc-sort-only-pending"
-      [ngModel]="onlyPending()"
-      (ngModelChange)="onlyPending.set($event)"
-    >
-      Solo pendientes
-    </mat-checkbox>
+    <div class="oc-sort-filters">
+      <mat-checkbox [ngModel]="onlyPending()" (ngModelChange)="onlyPending.set($event)">
+        Mostrar solo en curso
+      </mat-checkbox>
+      <mat-checkbox
+        [ngModel]="onlyPendienteLiberacion()"
+        (ngModelChange)="onlyPendienteLiberacion.set($event)"
+      >
+        Pendiente de OC/Liberación
+      </mat-checkbox>
+    </div>
   </div>
 }
 
@@ -41,7 +45,7 @@
   </div>
 } @else if (filteredOcs().length === 0) {
   <div class="panel-state">
-    <p>No hay OC pendientes. Desmarcá "Solo pendientes" para ver todas.</p>
+    <p>No hay OC que coincidan con los filtros seleccionados. Desmarcá alguno para ver más resultados.</p>
   </div>
 } @else if (isHandset()) {
   <div class="oc-cards">

@@ -14,6 +14,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { RecepcionesModule } from './recepciones/recepciones.module';
+import { DescargasModule } from './descargas/descargas.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { RecepcionesModule } from './recepciones/recepciones.module';
     AuthModule,
     MasterDataModule,
     RecepcionesModule,
+    DescargasModule,
     // Sirve el build de Angular (frontend/dist/frontend/browser) para
     // desplegar frontend + backend como un único Web Service en Render —
     // mismo origen, necesario porque las cookies de auth usan

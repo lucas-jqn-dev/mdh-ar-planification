@@ -1,0 +1,29 @@
+<div class="descargas-page">
+  <header class="descargas-header">
+    <h1>Descargas</h1>
+  </header>
+
+  <div class="descargas-grid">
+    @for (item of items; track item.key) {
+      <mat-card class="descarga-card">
+        <mat-icon class="descarga-icon">{{ item.icon }}</mat-icon>
+        <p class="descarga-descripcion">{{ item.descripcion }}</p>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          class="descarga-boton"
+          [disabled]="descargando() !== null"
+          (click)="descargar(item)"
+        >
+          @if (descargando() === item.key) {
+            <mat-spinner diameter="20" class="descarga-spinner" aria-hidden="true" />
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          <span>{{ item.titulo }}</span>
+        </button>
+      </mat-card>
+    }
+  </div>
+</div>

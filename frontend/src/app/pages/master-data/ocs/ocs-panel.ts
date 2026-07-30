@@ -123,6 +123,7 @@ export class OcsPanel {
   readonly errorMessage = signal<string | null>(null);
   readonly sortKey = signal<SortKey>('solped');
   readonly onlyPending = signal(true);
+  readonly onlyPendienteLiberacion = signal(false);
 
   /** Leído por master-data.html para el mat-panel-description del acordeón (total sin filtrar). */
   readonly summary = computed(() => {
@@ -133,10 +134,20 @@ export class OcsPanel {
     return `${count} registrada${count === 1 ? '' : 's'}`;
   });
 
-  /** Todas las OC, o solo las pendientes si el checkbox "Solo pendientes" está tildado. */
+  /**
+   * Todas las OC, angostadas por los checkboxes tildados: "En curso" (no
+   * completadas) y "Pendiente de OC/Liberación" (sin numeroOc todavía) se
+   * aplican en conjunto (AND), no son mutuamente excluyentes.
+   */
   readonly filteredOcs = computed(() => {
-    const items = this.ocs();
-    return this.onlyPending() ? items.filter((oc) => !oc.completada) : items;
+    let items = this.ocs();
+    if (this.onlyPending()) {
+      items = items.filter((oc) => !oc.completada);
+    }
+    if (this.onlyPendienteLiberacion()) {
+      items = items.filter((oc) => !oc.numeroOc);
+    }
+    return items;
   });
 
   /** Filas filtradas y ordenadas según `sortKey` (SolPed+Posición por default). */

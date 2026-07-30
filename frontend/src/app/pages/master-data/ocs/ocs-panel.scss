@@ -26,7 +26,11 @@
   gap: 0.25rem 1.25rem;
 }
 
-.oc-sort-only-pending {
+.oc-sort-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
   margin-left: auto;
 }
 
