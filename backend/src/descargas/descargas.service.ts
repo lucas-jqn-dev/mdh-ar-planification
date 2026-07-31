@@ -35,7 +35,8 @@ export class DescargasService {
     @InjectModel(Oc.name) private readonly ocModel: Model<OcDocument>,
   ) {}
 
-  async generarSolicitudLiberacion(): Promise<Buffer> {
+  /** `null` si no hay ninguna posición exportable — el controller responde 204 sin armar el workbook. */
+  async generarSolicitudLiberacion(): Promise<Buffer | null> {
     const ocs = (await this.ocModel
       .find({ completada: false, numeroOc: { $in: [null, ''] } })
       .populate('pep')
@@ -44,6 +45,10 @@ export class DescargasService {
       .exec()) as unknown as OcPoblada[];
 
     const rows = this.mapearFilas(ocs);
+
+    if (rows.length === 0) {
+      return null;
+    }
 
     return buildSolicitudLiberacionWorkbook(rows);
   }

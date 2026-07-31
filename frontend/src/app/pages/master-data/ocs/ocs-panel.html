@@ -25,9 +25,75 @@
 }
 
 @if (loading()) {
-<div class="panel-state">
-  <mat-spinner diameter="32" />
+@if (isHandset()) {
+<div class="oc-cards">
+  @for (i of skeletonCards; track i) {
+  <mat-card class="oc-card">
+    <div class="oc-card-header">
+      <app-skeleton width="60%" height="1.1rem" />
+    </div>
+    <div class="oc-card-status">
+      <app-skeleton width="6rem" height="1.5rem" radius="1rem" />
+    </div>
+    <dl class="oc-card-details">
+      <dt>Número OC</dt>
+      <dd><app-skeleton width="50%" /></dd>
+      <dt>Validez</dt>
+      <dd><app-skeleton width="60%" /></dd>
+      <dt>PEP</dt>
+      <dd><app-skeleton width="55%" /></dd>
+      <dt>Horas disponibles</dt>
+      <dd><app-skeleton width="30%" /></dd>
+      <dt>Consultor</dt>
+      <dd><app-skeleton width="55%" /></dd>
+      <dt>Perfil SAP</dt>
+      <dd><app-skeleton width="40%" /></dd>
+      <dt>Tarifa hora</dt>
+      <dd><app-skeleton width="40%" /></dd>
+      <dt>Total posición</dt>
+      <dd><app-skeleton width="45%" /></dd>
+      <dt>Proveedor</dt>
+      <dd><app-skeleton width="50%" /></dd>
+      <dt>Responsable</dt>
+      <dd><app-skeleton width="50%" /></dd>
+    </dl>
+  </mat-card>
+  }
 </div>
+} @else {
+<div class="panel-table-wrapper">
+  <table class="panel-table oc-table">
+    <thead>
+      <tr>
+        <th aria-label="Acciones"></th>
+        <th>SolPed</th>
+        <th>Posición</th>
+        <th>Número OC</th>
+        <th>PEP</th>
+        <th>Horas disponibles</th>
+        <th>Consultor</th>
+        <th>Perfil SAP</th>
+        <th>Tarifa hora</th>
+        <th>Total posición</th>
+        <th>Proveedor</th>
+        <th>Responsable</th>
+        <th>Mes desde</th>
+        <th>Mes hasta</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (i of skeletonRows; track i) {
+      <tr>
+        @for (col of skeletonColumns; track col) {
+        <td><app-skeleton /></td>
+        }
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+}
 } @else if (errorMessage()) {
 <div class="panel-state" role="alert">
   <p>{{ errorMessage() }}</p>

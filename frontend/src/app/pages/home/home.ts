@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import {
   BarChartModule,
@@ -18,6 +17,7 @@ import { Oc } from '../../models/oc.model';
 import { Recepcion } from '../../models/recepcion.model';
 import { formatMonto } from '../../core/utils/format.util';
 import { injectIsHandset } from '../../core/utils/breakpoint.util';
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { PepsService } from '../master-data/peps/peps.service';
 import { OcsService } from '../master-data/ocs/ocs.service';
 import { RecepcionesService } from '../order-recepcions/recepciones.service';
@@ -42,6 +42,11 @@ const PEP_COMPARATIVA_SCHEME: Color = {
 interface PepComparativaDatum {
   name: string;
   series: { name: string; value: number }[];
+}
+
+interface TotalDatum {
+  name: string;
+  value: number;
 }
 
 interface PepMovimientoLineDatum {
@@ -122,6 +127,30 @@ function sortPeps(items: Pep[]): Pep[] {
   return [...items].sort((a, b) => a.pepId.localeCompare(b.pepId));
 }
 
+/**
+ * Forecast/Asignado/Real sumados entre TODOS los PEP (a diferencia de
+ * `comparativaData`, que desglosa por PEP individual) para el período
+ * elegido — mismo fallback en `0` que el resto de la página si un PEP
+ * todavía no tiene `SaldoPep`.
+ */
+function totalPorTipo(peps: Pep[], filtro: PeriodoFiltro): TotalDatum[] {
+  let forecast = 0;
+  let asignado = 0;
+  let real = 0;
+
+  for (const pep of peps) {
+    forecast += montoSegunFiltro(pep.saldoActual?.forecastMensual, filtro);
+    asignado += montoSegunFiltro(pep.saldoActual?.asignacionMensual, filtro);
+    real += montoSegunFiltro(pep.saldoActual?.realMensual, filtro);
+  }
+
+  return [
+    { name: 'Forecast', value: forecast },
+    { name: 'Asignado', value: asignado },
+    { name: 'Real', value: real },
+  ];
+}
+
 /** Rojo de marca — bar chart de una sola serie (horas), no hace falta distinguir colores por consultor. */
 const CONSULTOR_HORAS_SCHEME: Color = {
   name: 'consultorHoras',
@@ -190,11 +219,11 @@ function horasPorConsultor(recepciones: Recepcion[], filtro: PeriodoFiltro): Con
     MatCardModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatProgressSpinnerModule,
     MatTabsModule,
     BarChartModule,
     LineChartModule,
     PieChartModule,
+    Skeleton,
   ],
   templateUrl: './home.html',
   styleUrl: './home.scss',
@@ -226,6 +255,20 @@ export class Home {
     const option = this.filtroOptions.find((o) => o.value === filtro);
     return filtro === ANUAL ? 'Monto anual' : `Monto ${option?.label ?? ''}`;
   });
+
+  /** Filtro de período del total agregado — independiente del de `comparativaData`, mismas opciones/default. */
+  readonly totalFiltro = signal<PeriodoFiltro>(mesActual());
+
+  readonly totalYAxisLabel = computed(() => {
+    const filtro = this.totalFiltro();
+    const option = this.filtroOptions.find((o) => o.value === filtro);
+    return filtro === ANUAL ? 'Monto anual' : `Monto ${option?.label ?? ''}`;
+  });
+
+  /** Forecast/Asignado/Real sumados entre todos los PEP, para el primer gráfico del tab PEPS. */
+  readonly totalPorTipoData = computed<TotalDatum[]>(() =>
+    totalPorTipo(this.peps(), this.totalFiltro()),
+  );
 
   /**
    * Forecast vs Asignado vs Real por PEP para el bar chart agrupado, según

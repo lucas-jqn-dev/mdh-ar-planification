@@ -6,9 +6,52 @@
 </div>
 
 @if (loading()) {
-<div class="panel-state">
-  <mat-spinner diameter="32" />
+@if (isHandset()) {
+<div class="pep-cards">
+  @for (i of skeletonCards; track i) {
+  <mat-card class="pep-card">
+    <div class="pep-card-header">
+      <app-skeleton width="45%" height="1.1rem" />
+    </div>
+    <dl class="pep-card-details">
+      <dt>País</dt>
+      <dd><app-skeleton width="40%" /></dd>
+      <dt>Forecast Anual</dt>
+      <dd><app-skeleton width="55%" /></dd>
+      <dt>Asignado</dt>
+      <dd><app-skeleton width="55%" /></dd>
+      <dt>Consumido Real</dt>
+      <dd><app-skeleton width="55%" /></dd>
+    </dl>
+  </mat-card>
+  }
 </div>
+} @else {
+<div class="panel-table-wrapper">
+  <table class="panel-table">
+    <thead>
+      <tr>
+        <th>ID PEP</th>
+        <th>Descripción</th>
+        <th>País</th>
+        <th>Forecast Anual</th>
+        <th>Asignado</th>
+        <th>Consumido Real</th>
+        <th aria-label="Acciones"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (i of skeletonRows; track i) {
+      <tr>
+        @for (col of skeletonColumns; track col) {
+        <td><app-skeleton /></td>
+        }
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+}
 } @else if (errorMessage()) {
 <div class="panel-state" role="alert">
   <p>{{ errorMessage() }}</p>

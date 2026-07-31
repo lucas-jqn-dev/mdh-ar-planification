@@ -2,11 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Consultor } from '../../../models/consultor.model';
 import { injectIsHandset } from '../../../core/utils/breakpoint.util';
+import { range } from '../../../core/utils/range.util';
+import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { ConsultoresService } from './consultores.service';
 import {
   ConsultorDialogResult,
@@ -38,7 +39,7 @@ function sortConsultores(items: Consultor[]): Consultor[] {
 @Component({
   selector: 'app-consultores-panel',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, Skeleton],
   templateUrl: './consultores-panel.html',
   styleUrl: './consultores-panel.scss',
 })
@@ -50,6 +51,9 @@ export class ConsultoresPanel {
   readonly isHandset = injectIsHandset();
   readonly isGroupRow = isGroupRow;
   readonly columnCount = 6;
+  readonly skeletonRows = range(6);
+  readonly skeletonCards = range(3);
+  readonly skeletonColumns = range(this.columnCount);
 
   readonly consultores = signal<Consultor[]>([]);
   readonly loading = signal(true);

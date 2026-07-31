@@ -7,6 +7,15 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1rem 0;
+
+  // Solo en desktop (mismo corte que Breakpoints.Handset, que termina en
+  // 959.98px) los gráficos se acomodan de a 2 por fila; en handset/tablet
+  // se mantienen apilados en una sola columna.
+  @media (min-width: 960px) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: start;
+  }
 }
 
 .chart-card {

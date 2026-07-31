@@ -6,9 +6,47 @@
 </div>
 
 @if (loading()) {
-  <div class="panel-state">
-    <mat-spinner diameter="32" />
-  </div>
+  @if (isHandset()) {
+    <div class="perfil-sap-cards">
+      @for (i of skeletonCards; track i) {
+        <mat-card class="perfil-sap-card">
+          <div class="perfil-sap-card-header">
+            <app-skeleton width="50%" height="1.1rem" />
+          </div>
+          <p class="perfil-sap-card-descripcion"><app-skeleton width="75%" height="0.9rem" /></p>
+          <dl class="perfil-sap-card-details">
+            <dt>Tarifa hora</dt>
+            <dd><app-skeleton width="50%" /></dd>
+            <dt>Proveedor</dt>
+            <dd><app-skeleton width="60%" /></dd>
+          </dl>
+        </mat-card>
+      }
+    </div>
+  } @else {
+    <div class="panel-table-wrapper">
+      <table class="panel-table perfil-sap-table">
+        <thead>
+          <tr>
+            <th>Código SAP</th>
+            <th>Descripción</th>
+            <th>Tarifa hora</th>
+            <th>Proveedor</th>
+            <th aria-label="Acciones"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of skeletonRows; track i) {
+            <tr>
+              @for (col of skeletonColumns; track col) {
+                <td><app-skeleton /></td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 } @else if (errorMessage()) {
   <div class="panel-state" role="alert">
     <p>{{ errorMessage() }}</p>

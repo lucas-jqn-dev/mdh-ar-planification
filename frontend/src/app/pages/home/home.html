@@ -4,9 +4,35 @@
   <mat-tab label="PEPS">
     <div class="tab-content">
       @if (loading()) {
-        <div class="panel-state">
-          <mat-spinner diameter="32" />
-        </div>
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <app-skeleton width="16rem" height="1.3rem" />
+            <app-skeleton width="10rem" height="2.5rem" />
+          </div>
+          <div class="chart-container">
+            <app-skeleton width="100%" height="100%" radius="0.5rem" />
+          </div>
+        </mat-card>
+
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <app-skeleton width="14rem" height="1.3rem" />
+            <app-skeleton width="10rem" height="2.5rem" />
+          </div>
+          <div class="chart-container">
+            <app-skeleton width="100%" height="100%" radius="0.5rem" />
+          </div>
+        </mat-card>
+
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <app-skeleton width="12rem" height="1.3rem" />
+            <app-skeleton width="10rem" height="2.5rem" />
+          </div>
+          <div class="chart-container">
+            <app-skeleton width="100%" height="100%" radius="0.5rem" />
+          </div>
+        </mat-card>
       } @else if (errorMessage()) {
         <div class="panel-state" role="alert">
           <p>{{ errorMessage() }}</p>
@@ -16,6 +42,36 @@
           <p>Todavía no hay PEPs cargados.</p>
         </div>
       } @else {
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Forecast vs Asignado vs Real Total</h2>
+            <mat-form-field appearance="outline" class="chart-filter" subscriptSizing="dynamic">
+              <mat-label>Período</mat-label>
+              <mat-select [ngModel]="totalFiltro()" (ngModelChange)="totalFiltro.set($event)">
+                @for (option of filtroOptions; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="chart-container">
+            <ngx-charts-bar-vertical
+              [results]="totalPorTipoData()"
+              [scheme]="scheme"
+              [legend]="false"
+              [xAxis]="true"
+              [yAxis]="true"
+              [showXAxisLabel]="false"
+              [showYAxisLabel]="true"
+              [yAxisLabel]="totalYAxisLabel()"
+              [roundDomains]="true"
+              [roundEdges]="false"
+              [yAxisTickFormatting]="formatMonto"
+            />
+          </div>
+        </mat-card>
+
         <mat-card class="chart-card">
           <div class="chart-header">
             <h2 class="chart-title">Forecast vs Asignado vs Real por PEP</h2>
@@ -85,9 +141,14 @@
   <mat-tab label="OC">
     <div class="tab-content">
       @if (ocsLoading()) {
-        <div class="panel-state">
-          <mat-spinner diameter="32" />
-        </div>
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <app-skeleton width="14rem" height="1.3rem" />
+          </div>
+          <div class="chart-container chart-container-pie">
+            <app-skeleton width="100%" height="100%" radius="0.5rem" />
+          </div>
+        </mat-card>
       } @else if (ocsErrorMessage()) {
         <div class="panel-state" role="alert">
           <p>{{ ocsErrorMessage() }}</p>
@@ -120,9 +181,15 @@
   <mat-tab label="CONSULTORES">
     <div class="tab-content">
       @if (recepcionesLoading()) {
-        <div class="panel-state">
-          <mat-spinner diameter="32" />
-        </div>
+        <mat-card class="chart-card">
+          <div class="chart-header">
+            <app-skeleton width="16rem" height="1.3rem" />
+            <app-skeleton width="10rem" height="2.5rem" />
+          </div>
+          <div class="chart-container">
+            <app-skeleton width="100%" height="100%" radius="0.5rem" />
+          </div>
+        </mat-card>
       } @else if (recepcionesErrorMessage()) {
         <div class="panel-state" role="alert">
           <p>{{ recepcionesErrorMessage() }}</p>

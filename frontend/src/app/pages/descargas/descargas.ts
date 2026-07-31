@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +11,7 @@ import { downloadBlob } from '../../core/utils/download.util';
 
 const SNACKBAR_DURATION_MS = 4000;
 const DESCARGA_ERROR_MESSAGE = 'No pudimos generar el archivo. Intenta nuevamente en unos minutos.';
+const SIN_DATOS_MESSAGE = 'No hay información relevante para generar este archivo.';
 
 interface DescargaItem {
   key: string;
@@ -18,7 +20,7 @@ interface DescargaItem {
   icon: string;
   // Debe coincidir con SOLICITUD_LIBERACION_FILE_NAME (backend/src/descargas/solicitud-liberacion.workbook.ts).
   nombreArchivo: string;
-  descargar: () => Observable<Blob>;
+  descargar: () => Observable<HttpResponse<Blob>>;
 }
 
 @Component({
@@ -54,9 +56,15 @@ export class Descargas {
     this.descargando.set(item.key);
 
     item.descargar().subscribe({
-      next: (blob) => {
+      next: (response) => {
         this.descargando.set(null);
-        downloadBlob(blob, item.nombreArchivo);
+
+        if (response.status === HttpStatusCode.NoContent || !response.body) {
+          this.snackBar.open(SIN_DATOS_MESSAGE, 'Cerrar', { duration: SNACKBAR_DURATION_MS });
+          return;
+        }
+
+        downloadBlob(response.body, item.nombreArchivo);
       },
       error: () => {
         this.descargando.set(null);

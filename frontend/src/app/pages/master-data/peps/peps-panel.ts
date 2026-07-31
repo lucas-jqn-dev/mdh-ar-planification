@@ -3,13 +3,14 @@ import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Pep, sumPresupuestoMensual } from '../../../models/pep.model';
 import { formatMonto } from '../../../core/utils/format.util';
 import { injectIsHandset } from '../../../core/utils/breakpoint.util';
+import { range } from '../../../core/utils/range.util';
+import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { PepsService } from './peps.service';
 import { PepDialogResult, PepFormDialog, PepFormDialogData } from './pep-form-dialog/pep-form-dialog';
 
@@ -42,14 +43,7 @@ function consumidoRealTotal(pep: Pep): number {
 @Component({
   selector: 'app-peps-panel',
   standalone: true,
-  imports: [
-    MatTableModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatTooltipModule,
-  ],
+  imports: [MatTableModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, Skeleton],
   templateUrl: './peps-panel.html',
   styleUrl: './peps-panel.scss',
 })
@@ -74,6 +68,9 @@ export class PepsPanel {
     'consumidoReal',    
     'acciones',
   ];
+  readonly skeletonRows = range(6);
+  readonly skeletonCards = range(3);
+  readonly skeletonColumns = range(this.displayedColumns.length);
 
   readonly peps = signal<Pep[]>([]);
   readonly loading = signal(true);

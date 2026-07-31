@@ -4,7 +4,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
@@ -13,6 +12,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Oc, formatMesAnio } from '../../../models/oc.model';
 import { formatMonto } from '../../../core/utils/format.util';
 import { injectIsHandset } from '../../../core/utils/breakpoint.util';
+import { range } from '../../../core/utils/range.util';
+import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { OcsService } from './ocs.service';
 import { OcDialogResult, OcFormDialog, OcFormDialogData } from './oc-form-dialog/oc-form-dialog';
 
@@ -106,10 +107,10 @@ function horasAgotadasSinCompletar(oc: Oc): boolean {
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
     MatRadioModule,
     MatSlideToggleModule,
     MatCheckboxModule,
+    Skeleton,
   ],
   templateUrl: './ocs-panel.html',
   styleUrl: './ocs-panel.scss',
@@ -129,6 +130,9 @@ export class OcsPanel {
   readonly isGroupRow = isGroupRow;
   readonly sortOptions = SORT_OPTIONS;
   readonly columnCount = 15;
+  readonly skeletonRows = range(6);
+  readonly skeletonCards = range(3);
+  readonly skeletonColumns = range(this.columnCount);
 
   readonly ocs = signal<Oc[]>([]);
   readonly loading = signal(true);

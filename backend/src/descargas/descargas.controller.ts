@@ -1,4 +1,4 @@
-import { Controller, Get, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { DescargasService } from './descargas.service';
@@ -15,6 +15,11 @@ export class DescargasController {
   @Get('solicitud-liberacion')
   async solicitudLiberacion(@Res() res: Response): Promise<void> {
     const buffer = await this.descargasService.generarSolicitudLiberacion();
+
+    if (!buffer) {
+      res.status(HttpStatus.NO_CONTENT).end();
+      return;
+    }
 
     res.set({
       'Content-Type': XLSX_CONTENT_TYPE,

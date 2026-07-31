@@ -2,12 +2,13 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PerfilSap } from '../../../models/perfil-sap.model';
 import { formatMonto } from '../../../core/utils/format.util';
 import { injectIsHandset } from '../../../core/utils/breakpoint.util';
+import { range } from '../../../core/utils/range.util';
+import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { PerfilesSapService } from './perfiles-sap.service';
 import {
   PerfilSapDialogResult,
@@ -39,7 +40,7 @@ function sortPerfilesSap(items: PerfilSap[]): PerfilSap[] {
 @Component({
   selector: 'app-perfiles-sap-panel',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, Skeleton],
   templateUrl: './perfiles-sap-panel.html',
   styleUrl: './perfiles-sap-panel.scss',
 })
@@ -52,6 +53,9 @@ export class PerfilesSapPanel {
   readonly formatMonto = formatMonto;
   readonly isGroupRow = isGroupRow;
   readonly columnCount = 5;
+  readonly skeletonRows = range(6);
+  readonly skeletonCards = range(3);
+  readonly skeletonColumns = range(this.columnCount);
 
   readonly perfilesSap = signal<PerfilSap[]>([]);
   readonly loading = signal(true);
