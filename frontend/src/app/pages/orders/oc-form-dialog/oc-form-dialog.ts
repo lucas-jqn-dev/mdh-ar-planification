@@ -23,14 +23,14 @@ import {
   formatDateAsMesAnio,
   formatMesAnio,
   parseMesAnio,
-} from '../../../../models/oc.model';
-import { Pep } from '../../../../models/pep.model';
-import { Consultor } from '../../../../models/consultor.model';
-import { formatMonto } from '../../../../core/utils/format.util';
+} from '../../../models/oc.model';
+import { Pep } from '../../../models/pep.model';
+import { Consultor } from '../../../models/consultor.model';
+import { formatMonto } from '../../../core/utils/format.util';
 import { OcsService } from '../ocs.service';
-import { PepsService } from '../../peps/peps.service';
-import { ConsultoresService } from '../../consultores/consultores.service';
-import { RecepcionesService } from '../../../order-recepcions/recepciones.service';
+import { PepsService } from '../../master-data/peps/peps.service';
+import { ConsultoresService } from '../../master-data/consultores/consultores.service';
+import { RecepcionesService } from '../../order-recepcions/recepciones.service';
 
 export interface OcFormDialogData {
   oc: Oc | null;

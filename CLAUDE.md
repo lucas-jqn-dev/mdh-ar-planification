@@ -28,6 +28,30 @@ chicas y verificables.
 - **Etapa 3**: ABM de Recepciones (`/order_recepcions`, fuera del acordeón de
   Datos Maestros — es un registro operativo contra las OC ya cargadas, no un
   catálogo maestro) — ver sección "Recepciones" abajo.
+- **OC (`/orders`) se sacó del acordeón de Datos Maestros y pasó a ser su
+  propia página de nivel superior**, a pedido explícito del usuario (mismo
+  criterio que ya tenía Recepciones desde el arranque: es la entidad contra
+  la que operan las Recepciones, no encaja como "catálogo de referencia"
+  dentro del acordeón). El código vivía en
+  `frontend/src/app/pages/master-data/ocs/` (`OcsPanel`, selector
+  `app-ocs-panel`) y se movió tal cual a
+  `frontend/src/app/pages/orders/` (componente renombrado a `Orders`,
+  selector `app-orders`, archivo `orders.ts`/`orders.html`/`orders.scss`;
+  `oc-form-dialog/` se movió junto sin cambios de nombre). El backend
+  **no cambió**: `OcsService.baseUrl` sigue apuntando a
+  `${environment.apiUrl}/master-data/ocs` (`backend/src/master-data/ocs/`
+  mantiene su prefijo de ruta `master-data/ocs` — es un reordenamiento
+  puramente de frontend). Item de nav agregado en `shell.ts` (`NAV_ITEMS`,
+  ícono `shopping_cart`, el mismo que usaba el panel dentro del acordeón)
+  entre "Datos Maestros" y "Recepciones". `OcsService` sigue siendo
+  consumida por `RecepcionFormDialog` (para el autocomplete de OC) y por
+  `Home` (para el dashboard) — al mover el archivo hubo que actualizar esos
+  dos imports (`../../orders/ocs.service` y `../orders/ocs.service`
+  respectivamente). El `summary()` computed de `OcsPanel` (leído por el
+  `mat-panel-description` del acordeón) se eliminó al mover el componente —
+  ya no tiene consumidor, `Orders` renderiza su propio `<h1>` en vez de vivir
+  dentro de un `<mat-expansion-panel>`, mismo patrón que
+  `OrderRecepcions`.
 
 ## Decisiones de arquitectura (y por qué)
 
@@ -213,7 +237,8 @@ chicas y verificables.
   nombre entre `Oc.pepId` (DTO) y `Pep.pepId` (schema) es real y confusa la
   primera vez — el comentario en `create-oc.dto.ts` lo aclara, no lo saques
   al refactorizar.
-- **La tabla desktop de OC (`ocs-panel.html`) es una tabla HTML nativa, no un
+- **La tabla desktop de OC (`orders.html`, `frontend/src/app/pages/orders/`)
+  es una tabla HTML nativa, no un
   `<table mat-table>`** como el resto de los paneles — es la única excepción
   deliberada al patrón. Motivo: necesita intercalar filas de "encabezado de
   grupo" (una por SolPed) con filas de datos en el mismo `@for`, y el
@@ -222,7 +247,7 @@ chicas y verificables.
   tipo correcto de fila dentro de cada `matCellDef` sin casts feos.
   **El sorting no usa `matSort`/columnas clickeables** (versión anterior,
   reemplazada a pedido explícito del usuario) sino un `mat-radio-group`
-  (`OcsPanel.sortKey`, tipo `SortKey = 'solped' | 'numeroOc' | 'consultor' |
+  (`Orders.sortKey`, tipo `SortKey = 'solped' | 'numeroOc' | 'consultor' |
   'proveedor' | 'responsable'`, exactamente esas 5 opciones, ni más ni
   menos) arriba de la tabla. `displayRows` agrupa **siempre**, según el
   campo que corresponda al `sortKey` activo (ya no es exclusivo de SolPed):
@@ -240,18 +265,14 @@ chicas y verificables.
   "salte" entre recargas cuando hay valores repetidos (ej. dos OC del mismo
   Proveedor).
 - **Checkbox "Solo pendientes" al final de `.oc-sort-bar`**
-  (`OcsPanel.onlyPending`, signal `boolean`, arranca en `true`) filtra la
+  (`Orders.onlyPending`, signal `boolean`, arranca en `true`) filtra la
   tabla y las cards de mobile a solo posiciones con `completada: false`. Se
   aplica **antes** del sorting/agrupado en la cadena de computeds:
   `filteredOcs` (filtra `ocs()` según `onlyPending()`) → `sortedOcs` (ordena
-  `filteredOcs()`) → `displayRows` (agrupa `sortedOcs()`). El `summary()`
-  leído por el acordeón de `master-data.html` sigue contando
-  `this.ocs().length` (total sin filtrar), no `filteredOcs()` — el checkbox
-  es solo un filtro visual de la tabla, no debe afectar el contador del
-  header. Hay un mensaje de estado dedicado
-  (`filteredOcs().length === 0 && ocs().length > 0`) distinto del de lista
-  vacía de verdad (`ocs().length === 0`), para no confundir "no hay OC
-  pendientes" con "no hay OC cargadas".
+  `filteredOcs()`) → `displayRows` (agrupa `sortedOcs()`). Hay un mensaje de
+  estado dedicado (`filteredOcs().length === 0 && ocs().length > 0`) distinto
+  del de lista vacía de verdad (`ocs().length === 0`), para no confundir "no
+  hay OC pendientes" con "no hay OC cargadas".
 - **"Copiar" una OC no es lo mismo que editar una OC con datos precargados
   distintos** — es un modo de alta. `OcFormDialogData` tiene dos campos:
   `oc: Oc | null` (no-null = edición real, con botón Eliminar y
@@ -277,7 +298,7 @@ chicas y verificables.
   paths distintos, pero es la convención más legible: rutas específicas
   antes que las genéricas). El campo no se pide nunca en
   `oc-form-dialog` — Mongoose lo default-ea a `false` al crear, y
-  `OcsPanel.toggleCompletada()` es el único lugar que lo cambia. Si la
+  `Orders.toggleCompletada()` es el único lugar que lo cambia. Si la
   request falla, el slide-toggle se revierte a mano
   (`event.source.checked = !completada` en el `error` del subscribe) para
   que la UI no quede mostrando un estado que no llegó a guardarse en Mongo.
@@ -427,8 +448,11 @@ chicas y verificables.
   hacían nada y cada panel actuaba como un acordeón de un solo panel sin
   coordinación con los demás (parecía "andar" en modo `multi` porque, sin
   accordion real, cada panel simplemente abre/cierra de forma independiente
-  por defecto). Al agregar OC, seguir el patrón actual: contenido puro en
-  `oc-panel.ts`, `<mat-expansion-panel>` en `master-data.html`.
+  por defecto). Al agregar un catálogo nuevo al acordeón, seguir el patrón
+  actual: contenido puro en el componente del sub-módulo,
+  `<mat-expansion-panel>` en `master-data.html` (OC (`Orders`) ya no sigue
+  este patrón — se sacó del acordeón a su propia página top-level, ver
+  bullet de "OC (`/orders`)" al principio de este archivo).
 - **`mat-toolbar[color="primary"]` no pinta nada en Material 3.** Los tokens
   M3 de `mat-toolbar` (`toolbar-container-background-color`) están fijados a
   `surface`/`on-surface` sin variante de color — es diseño intencional de
@@ -507,10 +531,11 @@ chicas y verificables.
   pendientes**, a pedido explícito) y le suma la OC de la recepción en
   edición si esa ya no estuviera pendiente (para no dejar el campo sin poder
   mostrar/conservar el valor actual al editar una recepción vieja).
-  `filteredOcs` filtra `assignableOcs()` por `oc.numeroOc` cuando el valor
-  del control es un string (búsqueda en curso) — **no** matchea por SolPed,
-  Consultor ni ningún otro campo, a propósito, porque el pedido fue
-  específicamente "escribir el número de OC". Las opciones (y el valor ya
+  `filteredOcs` filtra `assignableOcs()` por `oc.numeroOc` **o**
+  `oc.consultor.nombre` cuando el valor del control es un string (búsqueda
+  en curso) — a pedido explícito, para poder encontrar una OC tipeando el
+  nombre del consultor sin saber de memoria el número de OC. No matchea por
+  SolPed, Proveedor ni ningún otro campo. Las opciones (y el valor ya
   elegido en el input) se renderizan con `ocOptionLabel()`: **NRO OC /
   POSICIÓN / CONSULTOR / PROVEEDOR**, en ese orden — formato pedido
   explícitamente, no el mismo que usa `oc-form-dialog.ts` para sus propios
@@ -532,7 +557,7 @@ chicas y verificables.
     pierda la referencia).
 - **"Horas disponibles" tiene DOS fórmulas distintas a propósito: una para
   mostrar, otra para validar.** El bloque derivado del dialog de Recepción
-  y la columna "Horas disponibles" de la tabla de OC (`ocs-panel.ts`,
+  y la columna "Horas disponibles" de la tabla de OC (`orders.ts`,
   función `horasDisponibles(oc)`) usan siempre la fórmula **plana**
   `cantidadHoras - horasConsumidas` — sin excepciones, para que el número
   mostrado sea idéntico entre pantallas (a pedido explícito: el usuario

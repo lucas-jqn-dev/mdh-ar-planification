@@ -19,7 +19,7 @@ import { formatMonto } from '../../core/utils/format.util';
 import { injectIsHandset } from '../../core/utils/breakpoint.util';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { PepsService } from '../master-data/peps/peps.service';
-import { OcsService } from '../master-data/ocs/ocs.service';
+import { OcsService } from '../orders/ocs.service';
 import { RecepcionesService } from '../order-recepcions/recepciones.service';
 
 const LOAD_ERROR_MESSAGE = 'No pudimos cargar los PEPs. Intenta nuevamente.';

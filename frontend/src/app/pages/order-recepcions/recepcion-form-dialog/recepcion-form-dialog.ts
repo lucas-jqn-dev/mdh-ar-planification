@@ -21,7 +21,7 @@ import { Recepcion, RecepcionPayload } from '../../../models/recepcion.model';
 import { Oc, enumerarMeses, formatMesAnio } from '../../../models/oc.model';
 import { formatMonto } from '../../../core/utils/format.util';
 import { RecepcionesService } from '../recepciones.service';
-import { OcsService } from '../../master-data/ocs/ocs.service';
+import { OcsService } from '../../orders/ocs.service';
 
 export interface RecepcionFormDialogData {
   recepcion: Recepcion | null;
@@ -200,7 +200,7 @@ export class RecepcionFormDialog {
     return pendientes;
   });
 
-  /** Opciones del autocomplete, filtradas por número de OC a medida que se escribe. */
+  /** Opciones del autocomplete, filtradas por número de OC o nombre de consultor a medida que se escribe. */
   readonly filteredOcs = computed(() => {
     const value = this.ocValue();
     const search = typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -208,7 +208,11 @@ export class RecepcionFormDialog {
     if (!search) {
       return pool;
     }
-    return pool.filter((oc) => (oc.numeroOc ?? '').toLowerCase().includes(search));
+    return pool.filter(
+      (oc) =>
+        (oc.numeroOc ?? '').toLowerCase().includes(search) ||
+        (oc.consultor?.nombre ?? '').toLowerCase().includes(search),
+    );
   });
 
   /** Meses entre mesDesde/mesHasta de la OC seleccionada (ambos inclusive). */

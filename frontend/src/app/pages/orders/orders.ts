@@ -9,11 +9,11 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Oc, formatMesAnio } from '../../../models/oc.model';
-import { formatMonto } from '../../../core/utils/format.util';
-import { injectIsHandset } from '../../../core/utils/breakpoint.util';
-import { range } from '../../../core/utils/range.util';
-import { Skeleton } from '../../../shared/skeleton/skeleton';
+import { Oc, formatMesAnio } from '../../models/oc.model';
+import { formatMonto } from '../../core/utils/format.util';
+import { injectIsHandset } from '../../core/utils/breakpoint.util';
+import { range } from '../../core/utils/range.util';
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { OcsService } from './ocs.service';
 import { OcDialogResult, OcFormDialog, OcFormDialogData } from './oc-form-dialog/oc-form-dialog';
 
@@ -99,7 +99,7 @@ function horasAgotadasSinCompletar(oc: Oc): boolean {
 }
 
 @Component({
-  selector: 'app-ocs-panel',
+  selector: 'app-orders',
   standalone: true,
   imports: [
     FormsModule,
@@ -112,10 +112,10 @@ function horasAgotadasSinCompletar(oc: Oc): boolean {
     MatCheckboxModule,
     Skeleton,
   ],
-  templateUrl: './ocs-panel.html',
-  styleUrl: './ocs-panel.scss',
+  templateUrl: './orders.html',
+  styleUrl: './orders.scss',
 })
-export class OcsPanel {
+export class Orders {
   private readonly ocsService = inject(OcsService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -140,15 +140,6 @@ export class OcsPanel {
   readonly sortKey = signal<SortKey>('solped');
   readonly onlyPending = signal(true);
   readonly onlyPendienteLiberacion = signal(false);
-
-  /** Leído por master-data.html para el mat-panel-description del acordeón (total sin filtrar). */
-  readonly summary = computed(() => {
-    if (this.loading() || this.errorMessage()) {
-      return '';
-    }
-    const count = this.ocs().length;
-    return `${count} registrada${count === 1 ? '' : 's'}`;
-  });
 
   /**
    * Todas las OC, angostadas por los checkboxes tildados: "En curso" (no

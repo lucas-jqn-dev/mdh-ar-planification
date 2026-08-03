@@ -28,6 +28,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/master-data/master-data').then((m) => m.MasterData),
       },
       {
+        path: 'orders',
+        loadComponent: () => import('./pages/orders/orders').then((m) => m.Orders),
+      },
+      {
         path: 'order_recepcions',
         loadComponent: () =>
           import('./pages/order-recepcions/order-recepcions').then((m) => m.OrderRecepcions),

@@ -17,8 +17,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', path: 'home', icon: 'home' },
+  { label: 'Dashboard', path: 'home', icon: 'home' },
   { label: 'Datos Maestros', path: 'master_data', icon: 'inventory_2' },
+  { label: 'Órdenes de Compra', path: 'orders', icon: 'shopping_cart' },
   { label: 'Recepciones', path: 'order_recepcions', icon: 'move_to_inbox' },
   { label: 'Descargas', path: 'descargas', icon: 'download' },
 ];

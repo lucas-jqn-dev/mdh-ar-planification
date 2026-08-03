@@ -1,3 +1,5 @@
+<h1>Órdenes de Compra</h1>
+
 <div class="panel-toolbar">
   <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
     <mat-icon>add</mat-icon>
@@ -171,7 +173,6 @@
         <th>Mes desde</th>
         <th>Mes hasta</th>
         <th>Estado</th>
-        <!-- <th aria-label="Acciones"></th> -->
       </tr>
     </thead>
     <tbody>
@@ -212,24 +213,6 @@
             {{ row.completada ? 'Completada' : 'Pendiente' }}
           </mat-slide-toggle>
         </td>
-        <!-- <td class="oc-table-actions">
-                <button
-                  mat-icon-button
-                  type="button"
-                  [attr.aria-label]="'Copiar SolPed ' + row.solped"
-                  (click)="openCopyDialog(row)"
-                >
-                  <mat-icon>content_copy</mat-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  type="button"
-                  [attr.aria-label]="'Editar SolPed ' + row.solped"
-                  (click)="openEditDialog(row)"
-                >
-                  <mat-icon>edit</mat-icon>
-                </button>
-              </td> -->
       </tr>
       }
       }

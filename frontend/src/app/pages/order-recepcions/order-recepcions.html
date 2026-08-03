@@ -7,6 +7,27 @@
   </button>
 </div>
 
+@if (!loading() && !errorMessage() && recepciones().length > 0) {
+  <div class="recepcion-filter-bar">
+    <mat-form-field appearance="outline" class="recepcion-filter-field">
+      <mat-label>Filtrar por Consultor</mat-label>
+      <input
+        matInput
+        [formControl]="consultorControl"
+        [matAutocomplete]="consultorAuto"
+        placeholder="Escribí un nombre"
+        autocomplete="off"
+      />
+      <mat-autocomplete #consultorAuto="matAutocomplete" [displayWith]="consultorDisplayFn">
+        <mat-option [value]="null">Todos los consultores</mat-option>
+        @for (option of filteredConsultorOptions(); track option.id) {
+          <mat-option [value]="option">{{ option.nombre }}</mat-option>
+        }
+      </mat-autocomplete>
+    </mat-form-field>
+  </div>
+}
+
 @if (loading()) {
   @if (isHandset()) {
     <div class="recepcion-cards">
@@ -68,9 +89,13 @@
   <div class="panel-state">
     <p>Todavía no hay recepciones cargadas.</p>
   </div>
+} @else if (filteredRecepciones().length === 0) {
+  <div class="panel-state">
+    <p>No hay recepciones para el consultor seleccionado.</p>
+  </div>
 } @else if (isHandset()) {
   <div class="recepcion-cards">
-    @for (recepcion of recepciones(); track recepcion.id) {
+    @for (recepcion of filteredRecepciones(); track recepcion.id) {
       <mat-card class="recepcion-card">
         <div class="recepcion-card-header">
           <span class="recepcion-card-title">
