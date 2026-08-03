@@ -40,6 +40,8 @@
             <dd>{{ oc.consultor ? oc.consultor.nombre : '—' }}</dd>
             <dt>Proveedor</dt>
             <dd>{{ oc.consultor ? oc.consultor.proveedor : '—' }}</dd>
+            <dt>Perfil SAP</dt>
+            <dd>{{ oc.consultor?.perfilSap ? oc.consultor!.perfilSap!.descripcion : '—' }}</dd>
             <dt>Tarifa hora</dt>
             <dd>{{ oc.consultor?.perfilSap ? formatMonto(oc.consultor!.perfilSap!.tarifaHora) : '—' }}</dd>
             <dt>Cant. de horas OC</dt>
